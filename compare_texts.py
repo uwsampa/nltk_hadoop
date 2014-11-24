@@ -1,10 +1,10 @@
 import os
 import nltk
 import string
-import sys
 import pylab
 import numpy as np
 import networkx as nx
+import argparse
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from nltk.stem.porter import PorterStemmer
@@ -21,10 +21,8 @@ def get_texts(dir):
     return texts
 
 def stem_tokens(src, stemmer):
-    stemmed = []
-    for item in src:
-        stemmed.append(stemmer.stem(item))
-    return stemmed
+    return [stemmer.stem(item) for item in src]
+
 
 def tokenize(text):
     tokens = nltk.word_tokenize(text)
@@ -53,10 +51,12 @@ def plot_graph(g):
 
 
 if __name__ == '__main__':
+    desc = 'compute the tf-idf cosine similarity of a set of documents'
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('--input', default='./corpus', dest='input_dir')
+    args = vars(parser.parse_args())
+    input_dir = args['input_dir']
 
-    input_dir = './corpus'
-    if len(sys.argv) >= 2:
-        input_dir = sys.argv[1]
     texts = get_texts(input_dir)
     similarities = get_similarities(texts)
     sim_graph = get_similarity_graph(similarities)

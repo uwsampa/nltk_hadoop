@@ -1,9 +1,22 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import subprocess
-import sys
+import argparse
 import shutil
+import sys
+
+
+class MapReduceError(Exception):
+    """ error raised when a map reduce job fails"""
+
+    def __init__(self, value, source):
+        self.value = value
+        self.source = source
+
+    def __str__(self):
+        return repr(self.value)
 
 
 def run_map_job(mapper, input_dir, output_dir):
@@ -22,11 +35,11 @@ def run_map_job(mapper, input_dir, output_dir):
          -output $NLTK_HOME/{2} \
          -file {3}\
     '''.format(mapper, input_dir, output_dir, map_file).strip()
+
     try:
         subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError:
-        print 'ERROR: Map job %s failed' % mapper
-        raise
+    except subprocess.CalledProcessError as e:
+        raise MapReduceError('Map job {0} failed'.format(mapper), e)
 
 
 def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
@@ -49,72 +62,107 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
     command = command.strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError:
-        print 'ERROR: Map-Reduce job %s, %s failed' % (mapper, reducer)
-        raise
+    except subprocess.CalledProcessError as e:
+        err_msg = 'ERROR: Map-Reduce job {0}, {1} failed'
+        raise MapReduceError(err_msg.format(mapper, reducer), e)
 
 if __name__ == '__main__':
+    # directories where we will store intermediate results
+    word_join_dir = 'joined_words'
+    tfidf_dir = 'tfidf'
+    corpora_frequency_dir = 'corpora_freq'
+    word_count_dir = 'word_count'
+    word_frequency_dir = 'word_freq'
+    clean_content_dir = 'file_contents'
+
+    directories = [clean_content_dir, word_frequency_dir,
+                   word_count_dir, corpora_frequency_dir,
+                   tfidf_dir, word_join_dir]
+
+    desc = ''' computes the tf-idf cosine simiarity metric for a set
+               of documents using map reduce streaming. Set appropriate
+               paths in hadoop-streaming-env.sh and 'source' it before
+               running this script, or set the corresponding environment
+               variables manually.'''
+
+    parser = argparse.ArgumentParser(description=desc)
+
+    input_help = 'The relative path of the corpus to use as input'
+    parser.add_argument('--input', default='corpora',
+                        dest='input_dir', help=input_help)
+
+    output_help = 'The relative path where the results will be placed'
+    parser.add_argument('--output', default='similarities',
+                        dest='output_dir', help=output_help)
+
+    force_help = 'If set, silently overwrite output & intermediate dirs: '
+    force_help += ' '.join(directories)
+    parser.add_argument('--force', default=False, dest='force',
+                        help=force_help, action='store_true')
+    args = vars(parser.parse_args())
+    input_dir = args['input_dir']
+    output_dir = args['output_dir']
+    force = args['force']
+    directories.append(output_dir)
+
+    dirs_to_overwrite = filter(os.path.exists, directories)
+    if not force and len(dirs_to_overwrite) > 0:
+        print('The following directories will be overwritten:')
+        print('\t', '\n\t'.join(dirs_to_overwrite))
+        response = raw_input('Continue? [y/n] ')
+        if response not in ['y', 'yes', 'Y', 'Yes']:
+            exit()
+
+    # check to see that environment variables have been set
     env = os.environ.copy()
-    input_dir = "inaugural"
-    if len(sys.argv) > 1:
-        input_dir = sys.argv[1]
     try:
         val = env['NLTK_HOME']
-    except KeyError:
-        print 'ERROR: Please run "source ./hadoop-streaming-env.sh"'
-        raise
+    except KeyError as e:
+        err_msg = '''
+                  ERROR: environment variable NLTK_HOME undefined
+                  have you run "source hadoop-streaming-env.sh"?
+                  '''
+        print(err_msg, file=sys.stderr)
+        raise e
 
     # we need the size of the corpora to do tfidf:
     corp = './' + input_dir
     corp_files = [f for f in os.listdir(corp) if os.path.isfile(corp+'/'+f)]
     corpora_len = len(corp_files)
-    print 'CORP_SIZE: ', corpora_len
-
-    # TODO: probably shouldn't clobber these dirs in case there's
-    # anything in them
 
     # do an MR job to clean/stem file contents
-    clean_content_dir = 'file_contents'
     run_map_job('contents_mapper.py', input_dir, clean_content_dir)
 
     # calcualte word frequency
-    word_frequency_dir = 'word_freq'
     run_map_reduce_job('word_freq_map.py',
                        'word_freq_red.py',
                        clean_content_dir,
                        word_frequency_dir)
 
     # caclulate word count for each document
-    word_count_dir = 'word_count'
     run_map_reduce_job('word_count_map.py',
                        'word_count_red.py',
                        word_frequency_dir,
                        word_count_dir)
 
     # calculate word frequency in corpora
-    corpora_frequency_dir = 'corpora_freq'
     run_map_reduce_job('corp_freq_map.py',
                        'corp_freq_red.py',
                        word_count_dir,
                        corpora_frequency_dir)
 
     # now, calculate tfidf scores
-    tfidf_dir = 'tfidf'
     run_map_job('tf_idf_map.py {0}'.format(corpora_len),
                 corpora_frequency_dir,
                 tfidf_dir)
 
     # join on words for cosine similarity
-    word_join_dir = 'joined_words'
     run_map_reduce_job('word_join_map.py',
                        'word_join_red.py',
                        tfidf_dir,
                        word_join_dir)
 
     # now, sum up the products to get the cosine similarities
-    output_dir = "output"
-    if len(sys.argv) > 2:
-        output_dir = sys.argv[3]
     run_map_reduce_job('cos_sim_map.py',
                        'cos_sim_red.py',
                        word_join_dir,
