@@ -6,13 +6,35 @@
 python materialize_nltk_corpus.py inaugral
 ```
 
-# Run tagger on hadoop streaming
-
+# Set the appropriate environment variables
 ```sh
-./hadoop-tag.sh inaugural
+source ./hadoop-streaming-env.sh
+```
+or
+```sh
+export HADOOP_VERSION=  # the version of hadoop you are using, e.g. 2.5.1
+export HADOOP_HOME=  # the location of your hadoop installation
+export RELATIVE_PATH_JAR=  # location of hadoop streaming jar in HADOOP_HOME
+export NLTK_HOME=  # the location of your corpus, mappers and reducers
 ```
 
-See the output
+you may also want to ensure that the mapper and reducer scripts are executable
+
+
+# Run the MapReduce jobs to produce output
+
 ```sh
-ls out/part-*
+./mapred_tfidf --input INPUT_DIR --output OUTPUT_DIR
+```
+* run with the `--help` flag to view all options
+* run with `--force` to automatically overwrite intermediate directories
+
+See the cosine similarities of all documents:
+```sh
+ls $OUTPUT_DIR/part-*
+```
+
+See the tfidf metrics for each document/word pair:
+```
+ls $tfidf/part-*
 ```

@@ -7,6 +7,12 @@ import argparse
 import shutil
 import sys
 
+"""
+The main runnable script to produce tfidf scores and cosine
+similarities for a set of documents. run with '--help' to
+see help and arguments.
+"""
+
 
 class MapReduceError(Exception):
     """ error raised when a map reduce job fails"""
