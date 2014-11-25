@@ -91,24 +91,27 @@ if __name__ == '__main__':
                running this script, or set the corresponding environment
                variables manually.'''
 
-    parser = argparse.ArgumentParser(description=desc)
+    parser = argparse.ArgumentParser(
+        description=desc,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     input_help = 'The relative path of the corpus to use as input'
-    parser.add_argument('--input', default='corpora',
+    parser.add_argument('--input', '-i', '--src', default='corpus',
                         dest='input_dir', help=input_help)
 
     output_help = 'The relative path where the results will be placed'
-    parser.add_argument('--output', default='similarities',
+    parser.add_argument('--output', '-o', '--dst', default='similarities',
                         dest='output_dir', help=output_help)
 
     force_help = 'If set, silently overwrite output & intermediate dirs: '
     force_help += ' '.join(directories)
     parser.add_argument('--force', default=False, dest='force',
                         help=force_help, action='store_true')
-    args = vars(parser.parse_args())
-    input_dir = args['input_dir']
-    output_dir = args['output_dir']
-    force = args['force']
+    args = parser.parse_args()
+    input_dir = args.input_dir
+    output_dir = args.output_dir
+    force = args.force
     directories.append(output_dir)
 
     dirs_to_overwrite = filter(os.path.exists, directories)
