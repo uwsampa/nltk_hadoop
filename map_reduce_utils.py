@@ -84,7 +84,7 @@ class InputStreamWrapper:
 
     def __init__(self,
                  source_function=sys.stdin.readline,
-                 finished_function=lambda x: len(x()) != 0):
+                 finished_function=lambda x: len(x()) == 0):
         """
         constructs a new InputStreamWrapperObject which will make calls
         to source_function to retrieve the elements returned by next
@@ -121,7 +121,7 @@ class InputStreamWrapper:
         """
         returns true iff there are more elements in this stream
         """
-        return self.finished_function(self.peek)
+        return not self.finished_function(self.peek)
 
 
 def reducer_stream(src=sys.stdin.readline,
