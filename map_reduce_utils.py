@@ -70,8 +70,6 @@ class InputStreamWrapper:
         returns the next element in this stream without advancing
         to the next element.
         """
-        if not self.has_next():
-            raise StopIteration()
         if self.next_element is None:
             self.next_element = self.source_function()
         return self.next_element
