@@ -13,4 +13,4 @@ unique word throughout the entire corpus.
 for line in sys.stdin:
     key, value = line.strip().split('\t')
     word, docname = key.strip().split()
-    print '%s\t%s %s %s' % (word, docname, value, 1)
+    print '{0}\t{1} {2} {3}'.format(word, docname, value, 1)

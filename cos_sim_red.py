@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-import sys
+
+import argparse
+import map_reduce_utils as mr_util
 
 """
 (file1 file2) (tfidf1*tfidf2) --> (file1 file2) (cosine_similarity(f1, f2))
@@ -8,24 +10,23 @@ sums up the products of the tfidf values of words common between every
 pair of documents to produce the cosine similarity of the two documents
 """
 
-cur_sum = 0
-cur_docs = (None, None)  # will become (doc1, doc2)
+parser = argparse.ArgumentParser()
+parser.add_argument('--precision', '-p', dest='precision')
+precision = int(parser.parse_args().precision)
+
+keys = ['file1', 'file2']
+values = ['term']
+kv_convert = mr_util.KeyValueToDict(keys, values)
 
 
-def print_result(doc1, doc2, sum_for_docs):
-    print '%s %s\t%.16f' % (doc1, doc2, sum_for_docs)
+def print_result(doc1, doc2, sum_for_docs, precision=precision):
+    print '{0} {1}\t{2:.{3}f}'.format(doc1, doc2, sum_for_docs, precision)
 
-for line in sys.stdin:
-    key, value = line.strip().split('\t')
-    doc1, doc2 = key.strip().split()
-    product = float(value)
-    if (doc1, doc2) == cur_docs:
-        cur_sum += product
-    else:
-        if cur_docs[0] is not None and cur_docs[1] is not None:
-            print_result(cur_docs[0], cur_docs[1], cur_sum)
-        cur_docs = (doc1, doc2)
-        cur_sum = 0
 
-if cur_docs[0] is not None and cur_docs[1] is not None:
-    print_result(cur_docs[0], cur_docs[1], cur_sum)
+for key_stream in mr_util.reducer_stream():
+    sum_for_docs = 0
+    for kv_pair in key_stream:
+        kv_dict = kv_convert.to_dict(kv_pair)
+        term = kv_dict['value']['term']
+        sum_for_docs += float(term)
+    print_result(kv_dict['key']['file1'], kv_dict['key']['file2'], sum_for_docs)
