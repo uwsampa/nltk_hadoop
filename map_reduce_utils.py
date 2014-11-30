@@ -46,6 +46,35 @@ def tokenize_key_value_pair(kv_pair):
     return (key, value)
 
 
+class KeyValueToDict:
+    """
+    stores the expected state of key-value tuples returned by a tokenizer
+    and allows for key-value pairs to subsequently be converted from nested
+    tuples to nested dictionaries for easier use. The lists provided to the
+    constructor are used as the keys of the dictionaries that are returned.
+    """
+    def __init__(self, keys, values):
+        """
+        creates new KeyValueToDict where dictionaries returned by to_dict
+        will use the elements in keys to index each element in the key
+        and the elements in values to index each element in the value
+        """
+        self.keys = keys
+        self.values = values
+
+    def to_dict(self, kv_pair):
+        key = {}
+        value = {}
+        for i in range(len(self.keys)):
+            key[self.keys[i]] = kv_pair[0][i]
+        for i in range(len(self.values)):
+            value[self.values[i]] = kv_pair[1][i]
+        result = {}
+        result['key'] = key
+        result['value'] = value
+        return result
+
+
 class InputStreamWrapper:
     """
     wraps an input stream function (e.g. sys.stdin.readline) in an
