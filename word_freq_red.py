@@ -11,17 +11,13 @@ the result for each word/filename combination
 
 keys = ['word', 'filename']
 values = ['count']
-kv_convert = mr_util.KeyValueToDict(keys, values)
 
 
-def print_result(keyval, count):
-    print '{0} {1}\t{2}'.format(keyval['key']['word'],
-                                keyval['key']['filename'],
-                                count)
+def print_result(key, count):
+    print '{0} {1}\t{2}'.format(key['word'], key['filename'], count)
 
-for key_stream in mr_util.reducer_stream():
+for key, key_stream in mr_util.reducer_stream(keys, values):
     count = 0
-    for kv_pair in key_stream:
-        keyval_dict = kv_convert.to_dict(kv_pair)
-        count += int(keyval_dict['value']['count'])
-    print_result(keyval_dict, count)
+    for value in key_stream:
+        count += int(value['count'])
+    print_result(key, count)

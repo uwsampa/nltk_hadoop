@@ -124,21 +124,27 @@ class InputStreamWrapper:
         return not self.finished_function(self.peek)
 
 
-def reducer_stream(src=sys.stdin.readline,
+def reducer_stream(key_names, value_names,
+                   src=sys.stdin.readline,
                    tokenizer=tokenize_key_value_pair):
     """
-    yeilds a key_stream for each set of lines in src that have
-    equal keys after being tokenized with tokenizer.
+    yields a key and a key_stream for each set of lines in src that have
+    equal keys. Keys and values are tokenized with tokenizer and then stored
+    in dictionaries so that the nth item in the key or value is indexed by the
+    nth item in key_names or value_names, respectively.
     """
+    kv_converter = KeyValueToDict(key_names, value_names)
     source_stream = InputStreamWrapper(src)
     while source_stream.has_next():
-        yield key_stream(source_stream, tokenizer)
+        key = kv_converter.to_dict(tokenizer(source_stream.peek()))['key']
+        yield (key, key_stream(source_stream, kv_converter.to_dict, tokenizer))
     raise StopIteration()
 
 
-def key_stream(src, tokenizer=tokenize_key_value_pair):
+def key_stream(src, dict_converter, tokenizer=tokenize_key_value_pair):
     """
-    yeilds key-value pairs from src while the keys are the same.
+    yeilds values converted to dictionaries with dict_converter from
+    src while the keys are the same.
     """
     this_streams_key = None
     while src.has_next():
@@ -147,7 +153,7 @@ def key_stream(src, tokenizer=tokenize_key_value_pair):
         if this_streams_key is None:
             this_streams_key = key
         if this_streams_key == key:
-            yield tokenizer(src.next())
+            yield dict_converter(tokenizer(src.next()))['value']
         else:
             raise StopIteration()
     raise StopIteration()

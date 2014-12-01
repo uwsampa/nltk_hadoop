@@ -10,9 +10,8 @@ that sum for each word along with the number of occurences of that
 word in the given document
 """
 
-keys = ['filename']
-values = ['word', 'frequency']
-kv_convert = mr_util.KeyValueToDict(keys, values)
+key_names = ['filename']
+value_names = ['word', 'frequency']
 
 
 def print_results(values, filename, count):
@@ -21,11 +20,10 @@ def print_results(values, filename, count):
         print template.format(value['word'], filename, value['frequency'], count)
 
 
-for key_stream in mr_util.reducer_stream():
+for key, key_stream in mr_util.reducer_stream(key_names, value_names):
     count = 0
     values = []
-    for kv_pair in key_stream:
-        keyval_dict = kv_convert.to_dict(kv_pair)
-        values.append(keyval_dict['value'])
-        count += int(keyval_dict['value']['frequency'])
-    print_results(values, keyval_dict['key']['filename'], count)
+    for value in key_stream:
+        values.append(value)
+        count += int(value['frequency'])
+    print_results(values, key['filename'], count)

@@ -16,17 +16,15 @@ precision = int(parser.parse_args().precision)
 
 keys = ['file1', 'file2']
 values = ['term']
-kv_convert = mr_util.KeyValueToDict(keys, values)
 
 
 def print_result(doc1, doc2, sum_for_docs, precision=precision):
     print '{0} {1}\t{2:.{3}f}'.format(doc1, doc2, sum_for_docs, precision)
 
 
-for key_stream in mr_util.reducer_stream():
+for key, key_stream in mr_util.reducer_stream(keys, values):
     sum_for_docs = 0
-    for kv_pair in key_stream:
-        kv_dict = kv_convert.to_dict(kv_pair)
-        term = kv_dict['value']['term']
+    for value in key_stream:
+        term = value['term']
         sum_for_docs += float(term)
-    print_result(kv_dict['key']['file1'], kv_dict['key']['file2'], sum_for_docs)
+    print_result(key['file1'], key['file2'], sum_for_docs)

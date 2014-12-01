@@ -19,9 +19,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--precision', '-p', dest='precision')
 precision = int(parser.parse_args().precision)
 
-keys = ['word']
-values = ['filename', 'tfidf']
-kv_convert = mr_util.KeyValueToDict(keys, values)
+key_names = ['word']
+value_names = ['filename', 'tfidf']
 
 
 def print_results(values, word, precision=precision):
@@ -36,9 +35,8 @@ def print_results(values, word, precision=precision):
                                       product, precision)
 
 
-for key_stream in mr_util.reducer_stream():
+for key, key_stream in mr_util.reducer_stream(key_names, value_names):
     values = []
-    for kv_pair in key_stream:
-        kv_dict = kv_convert.to_dict(kv_pair)
-        values.append(kv_dict['value'])
-    print_results(values, kv_dict['key']['word'])
+    for value in key_stream:
+        values.append(value)
+    print_results(values, key['word'])

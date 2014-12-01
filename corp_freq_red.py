@@ -12,7 +12,6 @@ occurs in.
 
 keys = ['word']
 values = ['filename', 'freq', 'size', 'count']
-kv_convert = mr_util.KeyValueToDict(keys, values)
 
 
 def print_results(values, word, count):
@@ -24,11 +23,10 @@ def print_results(values, word, count):
                               value['size'], count)
 
 
-for key_stream in mr_util.reducer_stream():
+for key, key_stream in mr_util.reducer_stream(keys, values):
     count = 0
     values = []
-    for kv_pair in key_stream:
-        kv_dict = kv_convert.to_dict(kv_pair)
-        count += int(kv_dict['value']['count'])
-        values.append(kv_dict['value'])
-    print_results(values, kv_dict['key']['word'], count)
+    for value in key_stream:
+        count += int(value['count'])
+        values.append(value)
+    print_results(values, key['word'], count)
