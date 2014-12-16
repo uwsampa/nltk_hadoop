@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 from map_reduce_utils import reducer_stream
+import sys
 
 KEYS = ['filename']
 VALUES = ['word', 'frequency']
 
 
-def reduce_word_count(input=reducer_stream(KEYS, VALUES)):
+def reduce_word_count(input=reducer_stream(KEYS, VALUES), output=sys.stdout):
     """
     (file_name) (word n) --> (word file_name) (n, N)
 
@@ -21,14 +23,15 @@ def reduce_word_count(input=reducer_stream(KEYS, VALUES)):
         for value in key_stream:
             values.append(value)
             count += int(value['frequency'])
-        print_results(values, key['filename'], count)
+        print_results(values, key['filename'], count, output)
 
 
-def print_results(values, filename, count):
+def print_results(values, filename, count, output):
     template = '{0} {1}\t{2} {3}'
     for value in values:
-        print template.format(value['word'], filename,
-                              value['frequency'], count)
+        result = template.format(value['word'], filename,
+                                 value['frequency'], count)
+        print(result, file=output)
 
 
 if __name__ == '__main__':

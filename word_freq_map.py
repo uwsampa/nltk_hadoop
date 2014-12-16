@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 
 
-def map_word_frequency(input=sys.stdin):
+def map_word_frequency(input=sys.stdin, output=sys.stdout):
     """
     (file_name) (file_contents) --> (word file_name) (1)
 
@@ -12,10 +13,11 @@ def map_word_frequency(input=sys.stdin):
 
     """
 
+    template = '{} {}\t{}'
     for line in input:
         file_name, words = line.strip().split('\t')
         for word in words.strip().split():
-            print '%s %s\t%s' % (word, file_name, 1)
+            print(template.format(word, file_name, 1), file=output)
 
 
 if __name__ == '__main__':

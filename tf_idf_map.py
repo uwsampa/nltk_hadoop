@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import argparse
 from math import log
 
 
-def map_tf_idf(corpus_size, precision, input=sys.stdin):
+def map_tf_idf(corpus_size, precision, input=sys.stdin, output=sys.stdout):
     """
     (word file_name) (n N m) --> (word file_name) (tfidf)
 
@@ -28,7 +29,7 @@ def map_tf_idf(corpus_size, precision, input=sys.stdin):
         tf = float(n) / float(N)
         idf = log((float(D) / float(m)), 10)
         tfidf = tf * idf
-        print template.format(key, tfidf, precision)
+        print(template.format(key, tfidf, precision), file=output)
 
 
 if __name__ == '__main__':

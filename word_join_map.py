@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 
 
-def map_word_join(input=sys.stdin):
+def map_word_join(input=sys.stdin, output=sys.stdout):
     """
     (word file_name) (tfidf) --> (word) (file_name tfidf)
 
@@ -11,10 +12,11 @@ def map_word_join(input=sys.stdin):
     and the filename and tfidf score as the value
     """
 
+    template = '{}\t{} {}'
     for line in input:
         key, value = line.strip().split('\t')
         word, doc = key.strip().split()
-        print '%s\t%s %s' % (word, doc, value)
+        print(template.format(word, doc, value), file=output)
 
 
 if __name__ == '__main__':

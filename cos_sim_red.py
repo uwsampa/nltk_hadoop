@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+import sys
 import argparse
 from map_reduce_utils import reducer_stream
 
@@ -8,7 +10,9 @@ KEYS = ['file1', 'file2']
 VALUES = ['term']
 
 
-def reduce_cosine_similarity(precision, input=reducer_stream(KEYS, VALUES)):
+def reduce_cosine_similarity(precision,
+                             input=reducer_stream(KEYS, VALUES),
+                             output=sys.stdout):
     """
     (file1 file2) (tfidf1*tfidf2) --> (file1 file2) (cosine_similarity(f1, f2))
 
@@ -20,11 +24,13 @@ def reduce_cosine_similarity(precision, input=reducer_stream(KEYS, VALUES)):
         for value in key_stream:
             term = value['term']
             sum_for_docs += float(term)
-            print_result(key['file1'], key['file2'], sum_for_docs, precision)
+            print_result(key['file1'], key['file2'],
+                         sum_for_docs, precision, output)
 
 
-def print_result(doc1, doc2, sum_for_docs, precision):
-    print '{0} {1}\t{2:.{3}f}'.format(doc1, doc2, sum_for_docs, precision)
+def print_result(doc1, doc2, sum_for_docs, precision, output):
+    template = '{0} {1}\t{2:.{3}f}'
+    print(template.format(doc1, doc2, sum_for_docs, precision), file=output)
 
 
 if __name__ == '__main__':

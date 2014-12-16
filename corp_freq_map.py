@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 
 
-def map_corpus_frequency(input=sys.stdin):
+def map_corpus_frequency(input=sys.stdin, output=sys.stdout):
     """
     (word file_name) (n N) --> (word) (file_name n N 1)
 
@@ -14,7 +15,8 @@ def map_corpus_frequency(input=sys.stdin):
     for line in input:
         key, value = line.strip().split('\t')
         word, docname = key.strip().split()
-        print '{0}\t{1} {2} {3}'.format(word, docname, value, 1)
+        result = '{0}\t{1} {2} {3}'.format(word, docname, value, 1)
+        print(result, file=output)
 
 
 if __name__ == '__main__':
