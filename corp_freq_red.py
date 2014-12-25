@@ -24,7 +24,7 @@ def reduce_corpus_frequency(input=reducer_stream(KEYS, VALUES),
         for value in key_stream:
             count += int(value['count'])
             values.append(value)
-            print_results(values, key['word'], count, output)
+        print_results(values, key['word'], count, output)
 
 
 def print_results(values, word, count, output):
