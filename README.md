@@ -54,7 +54,7 @@ After cleaning and stemming a document, we obtain a list of words, `d`, for that
 * let `D` be the number of documents in the corpus
 * let `m` be the number of documents in which the word `d` appears at least once
 * `tf = n / N` (tf is the 'term frequency' of the word)
-* `idf = D / m` (idf is the 'inverse document frequency' of the word)
+* `idf = log(D / m)` (idf is the 'inverse document frequency' of the word)
 * `tfidf = tf*idf`
 
 These naming conventions are used in certain places in the codebase, for example in the docstrings for many mapper and reducer functions.
