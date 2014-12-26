@@ -168,13 +168,12 @@ class ReduceTestCase(unittest.TestCase):
             args['input'] = mru.reducer_stream(self.keys, self.values, f.readline)
             return pipe_through(self.to_test, args)
 
-    def run_reducer_tokenize(self, fixture=None, args={},
-                             tokenizer=mru.tokenize_key_value_pair):
+    def run_reducer_tokenize(self, fixture=None, args={}):
         """
         the same as run_reducer, but output is tokenized with tokenizer
         before being returned.
         """
-        return [tokenizer(i) for i in self.run_reducer(fixture, args)]
+        return [self.kv_to_dict(i) for i in self.run_reducer(fixture, args)]
 
     def are_no_matches(self, regex, fixture=None, args={}):
         """
