@@ -4,5 +4,5 @@ python:
   - "3.3"
 install:
   - "pip install nltk"
-  - "pip install sklearn"
+  - "pip install scikit-learn"
 script: nosetests
