@@ -24,8 +24,8 @@ def reduce_cosine_similarity(precision,
         for value in key_stream:
             term = value['term']
             sum_for_docs += float(term)
-            print_result(key['file1'], key['file2'],
-                         sum_for_docs, precision, output)
+        print_result(key['file1'], key['file2'],
+                     sum_for_docs, precision, output)
 
 
 def print_result(doc1, doc2, sum_for_docs, precision, output):
