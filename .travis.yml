@@ -3,6 +3,8 @@ python:
   - "2.7"
   - "3.3"
 install:
+  - "pip install numpy"
+  - "pip install scypi"
   - "pip install nltk"
   - "pip install scikit-learn"
 script: nosetests
