@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/uwsampa/nltk-hadoop.svg?branch=master)](https://travis-ci.org/uwsampa/nltk-hadoop)
 # Materialize an nltk corpus
 
 - find a corpus at http://nltk.googlecode.com/svn/trunk/nltk_data/index.xml, e.g. `inaugural`
