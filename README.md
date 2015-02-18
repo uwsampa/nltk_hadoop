@@ -23,6 +23,7 @@ you may also want to ensure that the mapper and reducer scripts are executable
 
 
 # Run the MapReduce jobs to produce output
+(note, this depends upon avro, nltk and scikit-learn)
 
 ```sh
 ./mapred_tfidf --input INPUT_DIR --output OUTPUT_DIR
