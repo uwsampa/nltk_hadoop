@@ -2,75 +2,15 @@
 
 from __future__ import print_function
 import os
-import subprocess
 import argparse
-import shutil
 import sys
+
 
 """
 The main runnable script to produce tfidf scores and cosine
 similarities for a set of documents. run with '--help' to
 see help and arguments.
 """
-
-
-class MapReduceError(Exception):
-    """ error raised when a map reduce job fails"""
-
-    def __init__(self, value, source):
-        self.value = value
-        self.source = source
-
-    def __str__(self):
-        return repr(self.value)
-
-
-def run_map_job(mapper, input_dir, output_dir):
-    env = os.environ.copy()
-    # we have to pass the specific files as well to allow for
-    # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    map_file = mapper.strip().split()[0]
-    if os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
-    command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
-         -D mapred.job.reduces=0 \
-         -mapper "$NLTK_HOME/{0}" \
-         -input $NLTK_HOME/{1} \
-         -output $NLTK_HOME/{2} \
-         -file {3}\
-    '''.format(mapper, input_dir, output_dir, map_file).strip()
-
-    try:
-        subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError as e:
-        raise MapReduceError('Map job {0} failed'.format(mapper), e)
-
-
-def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
-    env = os.environ.copy()
-    # we have to pass the specific files as well to allow for
-    # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    red_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    if os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
-    command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
-         -mapper "$NLTK_HOME/{0}" \
-         -reducer "$NLTK_HOME/{1}" \
-         -input $NLTK_HOME/{2} \
-         -output $NLTK_HOME/{3} \
-         -file {4} \
-         -file {5}
-    '''.format(mapper, reducer, input_dir, output_dir, map_file, red_file)
-    command = command.strip()
-    try:
-        subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError as e:
-        err_msg = 'ERROR: Map-Reduce job {0}, {1} failed'
-        raise MapReduceError(err_msg.format(mapper, reducer), e)
 
 if __name__ == '__main__':
     # directories where we will store intermediate results
