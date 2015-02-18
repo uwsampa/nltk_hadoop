@@ -4,6 +4,7 @@ from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as stopwords
 import string
 import re
+import os
 import sys
 import shutil
 import subprocess
