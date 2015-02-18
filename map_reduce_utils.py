@@ -107,10 +107,6 @@ def tokenize_key_value_pair(kv_pair):
     return (key, value)
 
 
-def avro_to_dictionary(avro_kv):
-
-
-
 class KeyValueToDict:
     """
     stores the expected state of key-value tuples returned by a tokenizer
