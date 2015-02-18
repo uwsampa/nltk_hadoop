@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import argparse
 import sys
+import map_reduce_utils as mru
 
 
 """
@@ -86,39 +87,40 @@ if __name__ == '__main__':
     corpus_len = len(corp_files)
 
     # do an MR job to clean/stem file contents
-    run_map_job('contents_mapper.py', input_dir, clean_content_dir)
+    mru.run_map_job('mappers/contents_mapper.py', input_dir, clean_content_dir)
 
     # calcualte word frequency
-    run_map_reduce_job('word_freq_map.py',
-                       'word_freq_red.py',
-                       clean_content_dir,
-                       word_frequency_dir)
+    mru.run_map_reduce_job('mappers/word_freq_map.py',
+                           'reducers/word_freq_red.py',
+                           clean_content_dir,
+                           word_frequency_dir)
 
     # caclulate word count for each document
-    run_map_reduce_job('word_count_map.py',
-                       'word_count_red.py',
-                       word_frequency_dir,
-                       word_count_dir)
+    mru.run_map_reduce_job('mappers/word_count_map.py',
+                           'reducers/word_count_red.py',
+                           word_frequency_dir,
+                           word_count_dir)
 
     # calculate word frequency in corpus
-    run_map_reduce_job('corp_freq_map.py',
-                       'corp_freq_red.py',
-                       word_count_dir,
-                       corpus_frequency_dir)
+    mru.run_map_reduce_job('mappers/corp_freq_map.py',
+                           'reducers/corp_freq_red.py',
+                           word_count_dir,
+                           corpus_frequency_dir)
 
     # now, calculate tfidf scores
-    run_map_job('tf_idf_map.py -s {0} -p {1}'.format(corpus_len, precision),
-                corpus_frequency_dir,
-                tfidf_dir)
+    mru.run_map_job('mappers/tf_idf_map.py -s {0} -p {1}'.format(corpus_len,
+                                                                 precision),
+                    corpus_frequency_dir,
+                    tfidf_dir)
 
     # join on words for cosine similarity
-    run_map_reduce_job('word_join_map.py',
-                       'word_join_red.py -p {0}'.format(precision),
-                       tfidf_dir,
-                       word_join_dir)
+    mru.run_map_reduce_job('mappers/word_join_map.py',
+                           'reducers/word_join_red.py -p {0}'.format(precision),
+                           tfidf_dir,
+                           word_join_dir)
 
     # now, sum up the products to get the cosine similarities
-    run_map_reduce_job('cos_sim_map.py',
-                       'cos_sim_red.py -p {0}'.format(precision),
-                       word_join_dir,
-                       output_dir)
+    mru.run_map_reduce_job('mappers/cos_sim_map.py',
+                           'reducers/cos_sim_red.py -p {0}'.format(precision),
+                           word_join_dir,
+                           output_dir)
