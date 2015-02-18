@@ -3,7 +3,7 @@
 from __future__ import print_function
 import argparse
 import sys
-from map_reduce_utils import reducer_stream
+import map_reduce_utils as mru
 
 
 KEYS = ['word']
@@ -11,7 +11,7 @@ VALUES = ['filename', 'tfidf']
 
 
 def reduce_word_join(precision,
-                     input=reducer_stream(KEYS, VALUES),
+                     input=mru.reducer_stream(KEYS, VALUES),
                      output=sys.stdout):
     """
     (word) (file_name tfidf) --> (word) (file1 file2 tfidf1*tfidf2)

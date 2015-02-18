@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys
-from map_reduce_utils import reducer_stream
+from sys import stdout
+import map_reduce_utils as mru
 
 
 KEYS = ['word']
 VALUES = ['filename', 'freq', 'size', 'count']
 
 
-def reduce_corpus_frequency(input=reducer_stream(KEYS, VALUES),
-                            output=sys.stdout):
+def reduce_corpus_frequency(input=mru.reducer_stream(KEYS, VALUES),
+                            output=stdout):
     """
     (word) (file_name n N 1) --> (word file_name) (n N m)
 

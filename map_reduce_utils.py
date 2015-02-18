@@ -14,6 +14,16 @@ map_reduce_utils contains helper functions that are used in multiple
 map-reduce tasks.
 """
 
+APACHE_LIB = 'org.apache.hadoop.mapred'
+
+DEFAULT_INPUT_FORMAT = '{}.TextInputFormat'.format(APACHE_LIB)
+DEFAULT_OUTPUT_FORMAT = '{}.TextOutputFormat'.format(APACHE_LIB)
+
+AVRO_IO_LIB = 'org.apache.avro.mapred'
+
+AVRO_INPUT_FORMAT = "org.apache.avro.mapred.AvroAsTextInputFormat"
+AVRO_OUTPUT_FORMAT = "org.apache.avro.mapred.AvroAsTextOutputFormat"
+
 
 class MapReduceError(Exception):
     """ error raised when a map reduce job fails"""
@@ -26,12 +36,13 @@ class MapReduceError(Exception):
         return repr(self.value)
 
 
-def run_map_job(mapper, input_dir, output_dir):
+def run_map_job(mapper, input_dir, output_dir,
+                input_format=DEFAULT_INPUT_FORMAT,
+                output_format=DEFAULT_OUTPUT_FORMAT):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    map_file = mapper.strip().split()[0]
     if os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
     command = '''
@@ -41,7 +52,10 @@ def run_map_job(mapper, input_dir, output_dir):
          -input $NLTK_HOME/{1} \
          -output $NLTK_HOME/{2} \
          -file {3}\
-    '''.format(mapper, input_dir, output_dir, map_file).strip()
+         -inputformat {4} \
+         -outputformat {5}
+    '''.format(mapper, input_dir, output_dir, map_file,
+               input_format, output_format).strip()
 
     try:
         subprocess.check_call(command, env=env, shell=True)
@@ -49,12 +63,18 @@ def run_map_job(mapper, input_dir, output_dir):
         raise MapReduceError('Map job {0} failed'.format(mapper), e)
 
 
-def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
+def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
+                       input_format=DEFAULT_INPUT_FORMAT,
+                       output_format=DEFAULT_OUTPUT_FORMAT):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    red_file = '$NLTK_HOME/' + mapper.strip().split()[0]
+    red_file = '$NLTK_HOME/' + reducer.strip().split()[0]
+    print 'map_file', map_file
+    print 'reduce_file', red_file
+    print 'mapper', mapper
+    print 'reducer', reducer
     if os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
     command = '''
@@ -64,8 +84,11 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
          -input $NLTK_HOME/{2} \
          -output $NLTK_HOME/{3} \
          -file {4} \
-         -file {5}
-    '''.format(mapper, reducer, input_dir, output_dir, map_file, red_file)
+         -file {5} \
+         -inputformat {6} \
+         -outputformat {7}
+    '''.format(mapper, reducer, input_dir, output_dir, map_file, red_file,
+               input_format, output_format)
     command = command.strip()
     try:
         subprocess.check_call(command, env=env, shell=True)

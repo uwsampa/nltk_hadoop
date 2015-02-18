@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys
 import argparse
-from map_reduce_utils import reducer_stream
+from sys import stdout
+import map_reduce_utils as mru
 
 
 KEYS = ['file1', 'file2']
@@ -11,8 +11,8 @@ VALUES = ['term']
 
 
 def reduce_cosine_similarity(precision,
-                             input=reducer_stream(KEYS, VALUES),
-                             output=sys.stdout):
+                             input=mru.reducer_stream(KEYS, VALUES),
+                             output=stdout):
     """
     (file1 file2) (tfidf1*tfidf2) --> (file1 file2) (cosine_similarity(f1, f2))
 

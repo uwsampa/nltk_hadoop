@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-from map_reduce_utils import reducer_stream
-import sys
+from sys import stdout
+import map_reduce_utils as mru
 
 KEYS = ['filename']
 VALUES = ['word', 'frequency']
 
 
-def reduce_word_count(input=reducer_stream(KEYS, VALUES), output=sys.stdout):
+def reduce_word_count(input=mru.reducer_stream(KEYS, VALUES), output=stdout):
     """
     (file_name) (word n) --> (word file_name) (n, N)
 

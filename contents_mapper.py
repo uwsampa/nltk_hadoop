@@ -3,7 +3,7 @@
 from __future__ import print_function
 import os
 import sys
-from map_reduce_utils import clean_text
+import map_reduce_utils as mru
 
 
 def map_contents(input=sys.stdin, output=sys.stdout):
@@ -18,7 +18,7 @@ def map_contents(input=sys.stdin, output=sys.stdout):
     template = '{}\t{}'
     for line in input:
         docname = os.environ['mapreduce_map_input_file']
-        contents = clean_text(line)
+        contents = mru.clean_text(line)
         result = template.format(docname, ' '.join(map(str, contents)))
         print(result, file=output)
 
