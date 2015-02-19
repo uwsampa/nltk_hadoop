@@ -22,7 +22,7 @@ DEFAULT_OUTPUT_FORMAT = '{}.TextOutputFormat'.format(APACHE_LIB)
 AVRO_IO_LIB = 'org.apache.avro.mapred'
 
 AVRO_INPUT_FORMAT = "org.apache.avro.mapred.AvroAsTextInputFormat"
-AVRO_OUTPUT_FORMAT = "org.apache.avro.mapred.AvroAsTextOutputFormat"
+AVRO_OUTPUT_FORMAT = "org.apache.avro.mapred.AvroTextOutputFormat"
 
 
 class MapReduceError(Exception):
@@ -47,16 +47,16 @@ def run_map_job(mapper, input_dir, output_dir,
         shutil.rmtree('./' + output_dir)
     command = '''
       $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
+         -files {0} \
+         -libjars {1} \
          -D mapred.job.reduces=0 \
-         -mapper "$NLTK_HOME/{0}" \
-         -input $NLTK_HOME/{1} \
-         -output $NLTK_HOME/{2} \
-         -file {3}\
-         -inputformat {4} \
-         -outputformat {5}
-    '''.format(mapper, input_dir, output_dir, map_file,
-               input_format, output_format).strip()
-
+         -mapper "$NLTK_HOME/{2}" \
+         -input $NLTK_HOME/{3} \
+         -output $NLTK_HOME/{4} \
+         -inputformat {5} \
+         -outputformat {6}
+    '''.format(map_file + ",$AVRO_JAR", "$AVRO_JAR", mapper, input_dir,
+               output_dir,  input_format, output_format).strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
@@ -71,23 +71,22 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
     # arguments to the mapper and reducer
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
     red_file = '$NLTK_HOME/' + reducer.strip().split()[0]
-    print 'map_file', map_file
-    print 'reduce_file', red_file
-    print 'mapper', mapper
-    print 'reducer', reducer
     if os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
+
+    # all of the additional files each node needs, comma separated
+    files = map_file + ',' + red_file + ",$AVRO_JAR"
     command = '''
       $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
-         -mapper "$NLTK_HOME/{0}" \
-         -reducer "$NLTK_HOME/{1}" \
-         -input $NLTK_HOME/{2} \
-         -output $NLTK_HOME/{3} \
-         -file {4} \
-         -file {5} \
+         -files {0} \
+         -libjars {1} \
+         -mapper "$NLTK_HOME/{2}" \
+         -reducer "$NLTK_HOME/{3}" \
+         -input $NLTK_HOME/{4} \
+         -output $NLTK_HOME/{5} \
          -inputformat {6} \
          -outputformat {7}
-    '''.format(mapper, reducer, input_dir, output_dir, map_file, red_file,
+    '''.format(files, "$AVRO_JAR", mapper, reducer, input_dir, output_dir,
                input_format, output_format)
     command = command.strip()
     try:
