@@ -1,44 +1,39 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
-
-"""
-(word) (file_name n N 1) --> (word file_name) (n N m)
-
-sums up the number of occurences of each unique word throughout
-the corpus and emits this sum for each document that the word
-occurs in.
-"""
+from map_reduce_utils import reducer_stream
 
 
-def print_results(count, files):
-    for string in files:
-        print '%s %s' % (string, count)
-
-processed_files = []
-cur_word = None
-cur_count = 0
-
-word = None
+KEYS = ['word']
+VALUES = ['filename', 'freq', 'size', 'count']
 
 
-for line in sys.stdin:
-    key, value = line.strip().split('\t')
-    word = key.strip()
-    docname, word_count, doc_count, count = value.strip().split()
-    count = int(count)
-    # add document/word combo to processed files
-    processed_combo = '%s %s\t%s %s' % (word, docname, word_count, doc_count)
-    if cur_word == word:
-        cur_count += count
-        processed_files.append(processed_combo)
-    else:
-        if cur_word is not None:
-            print_results(cur_count, processed_files)
-        cur_word = word
-        cur_count = count
-        processed_files = []
-        processed_files.append(processed_combo)
+def reduce_corpus_frequency(input=reducer_stream(KEYS, VALUES),
+                            output=sys.stdout):
+    """
+    (word) (file_name n N 1) --> (word file_name) (n N m)
 
-if cur_word is not None:
-    print_results(cur_count, processed_files)
+    sums up the number of occurences of each unique word throughout
+    the corpus and emits this sum for each document that the word
+    occurs in.
+    """
+    for key, key_stream in input:
+        count = 0
+        values = []
+        for value in key_stream:
+            count += int(value['count'])
+            values.append(value)
+        print_results(values, key['word'], count, output)
+
+
+def print_results(values, word, count, output):
+    template = '{0} {1}\t{2} {3} {4}'
+    for value in values:
+        result = template.format(word, value['filename'],
+                                 value['freq'], value['size'], count)
+        print(result, file=output)
+
+
+if __name__ == '__main__':
+    reduce_corpus_frequency()

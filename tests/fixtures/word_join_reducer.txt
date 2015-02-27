@@ -1,0 +1,5 @@
+word1	file1 0.5
+word1	file2 1.0
+word2	file1 0.5
+word2	file2 0.5
+word2	file3 0.1

@@ -76,13 +76,13 @@ if __name__ == '__main__':
     # directories where we will store intermediate results
     word_join_dir = 'joined_words'
     tfidf_dir = 'tfidf'
-    corpora_frequency_dir = 'corpora_freq'
+    corpus_frequency_dir = 'corpus_freq'
     word_count_dir = 'word_count'
     word_frequency_dir = 'word_freq'
     clean_content_dir = 'file_contents'
 
     directories = [clean_content_dir, word_frequency_dir,
-                   word_count_dir, corpora_frequency_dir,
+                   word_count_dir, corpus_frequency_dir,
                    tfidf_dir, word_join_dir]
 
     desc = ''' computes the tf-idf cosine simiarity metric for a set
@@ -91,24 +91,33 @@ if __name__ == '__main__':
                running this script, or set the corresponding environment
                variables manually.'''
 
-    parser = argparse.ArgumentParser(description=desc)
+    parser = argparse.ArgumentParser(
+        description=desc,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     input_help = 'The relative path of the corpus to use as input'
-    parser.add_argument('--input', default='corpora',
+    parser.add_argument('--input', '-i', '--src', default='corpus',
                         dest='input_dir', help=input_help)
 
     output_help = 'The relative path where the results will be placed'
-    parser.add_argument('--output', default='similarities',
+    parser.add_argument('--output', '-o', '--dst', default='similarities',
                         dest='output_dir', help=output_help)
 
     force_help = 'If set, silently overwrite output & intermediate dirs: '
     force_help += ' '.join(directories)
-    parser.add_argument('--force', default=False, dest='force',
+    parser.add_argument('--force', '-f', default=False, dest='force',
                         help=force_help, action='store_true')
-    args = vars(parser.parse_args())
-    input_dir = args['input_dir']
-    output_dir = args['output_dir']
-    force = args['force']
+
+    precision_help = 'The number of digits of precision the results will be'
+    parser.add_argument('--precision', '-p', default=10, dest='precision',
+                        help=precision_help)
+
+    args = parser.parse_args()
+    input_dir = args.input_dir
+    output_dir = args.output_dir
+    force = args.force
+    precision = args.precision
     directories.append(output_dir)
 
     dirs_to_overwrite = filter(os.path.exists, directories)
@@ -131,10 +140,10 @@ if __name__ == '__main__':
         print(err_msg, file=sys.stderr)
         raise e
 
-    # we need the size of the corpora to do tfidf:
+    # we need the size of the corpus to do tfidf:
     corp = './' + input_dir
     corp_files = [f for f in os.listdir(corp) if os.path.isfile(corp+'/'+f)]
-    corpora_len = len(corp_files)
+    corpus_len = len(corp_files)
 
     # do an MR job to clean/stem file contents
     run_map_job('contents_mapper.py', input_dir, clean_content_dir)
@@ -151,25 +160,25 @@ if __name__ == '__main__':
                        word_frequency_dir,
                        word_count_dir)
 
-    # calculate word frequency in corpora
+    # calculate word frequency in corpus
     run_map_reduce_job('corp_freq_map.py',
                        'corp_freq_red.py',
                        word_count_dir,
-                       corpora_frequency_dir)
+                       corpus_frequency_dir)
 
     # now, calculate tfidf scores
-    run_map_job('tf_idf_map.py {0}'.format(corpora_len),
-                corpora_frequency_dir,
+    run_map_job('tf_idf_map.py -s {0} -p {1}'.format(corpus_len, precision),
+                corpus_frequency_dir,
                 tfidf_dir)
 
     # join on words for cosine similarity
     run_map_reduce_job('word_join_map.py',
-                       'word_join_red.py',
+                       'word_join_red.py -p {0}'.format(precision),
                        tfidf_dir,
                        word_join_dir)
 
     # now, sum up the products to get the cosine similarities
     run_map_reduce_job('cos_sim_map.py',
-                       'cos_sim_red.py',
+                       'cos_sim_red.py -p {0}'.format(precision),
                        word_join_dir,
                        output_dir)

@@ -1,31 +1,40 @@
 #!/usr/bin/env python
+
+from __future__ import print_function
 import sys
-
-"""
-(file1 file2) (tfidf1*tfidf2) --> (file1 file2) (cosine_similarity(f1, f2))
-
-sums up the products of the tfidf values of words common between every
-pair of documents to produce the cosine similarity of the two documents
-"""
-
-cur_sum = 0
-cur_docs = (None, None)  # will become (doc1, doc2)
+import argparse
+from map_reduce_utils import reducer_stream
 
 
-def print_result(doc1, doc2, sum_for_docs):
-    print '%s %s\t%.16f' % (doc1, doc2, sum_for_docs)
+KEYS = ['file1', 'file2']
+VALUES = ['term']
 
-for line in sys.stdin:
-    key, value = line.strip().split('\t')
-    doc1, doc2 = key.strip().split()
-    product = float(value)
-    if (doc1, doc2) == cur_docs:
-        cur_sum += product
-    else:
-        if cur_docs[0] is not None and cur_docs[1] is not None:
-            print_result(cur_docs[0], cur_docs[1], cur_sum)
-        cur_docs = (doc1, doc2)
-        cur_sum = 0
 
-if cur_docs[0] is not None and cur_docs[1] is not None:
-    print_result(cur_docs[0], cur_docs[1], cur_sum)
+def reduce_cosine_similarity(precision,
+                             input=reducer_stream(KEYS, VALUES),
+                             output=sys.stdout):
+    """
+    (file1 file2) (tfidf1*tfidf2) --> (file1 file2) (cosine_similarity(f1, f2))
+
+    sums up the products of the tfidf values of words common between every
+    pair of documents to produce the cosine similarity of the two documents
+    """
+    for key, key_stream in input:
+        sum_for_docs = 0
+        for value in key_stream:
+            term = value['term']
+            sum_for_docs += float(term)
+        print_result(key['file1'], key['file2'],
+                     sum_for_docs, precision, output)
+
+
+def print_result(doc1, doc2, sum_for_docs, precision, output):
+    template = '{0} {1}\t{2:.{3}f}'
+    print(template.format(doc1, doc2, sum_for_docs, precision), file=output)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--precision', '-p', dest='precision')
+    precision = int(parser.parse_args().precision)
+    reduce_cosine_similarity(precision)

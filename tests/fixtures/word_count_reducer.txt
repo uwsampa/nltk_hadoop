@@ -1,0 +1,7 @@
+file1	word1 3
+file1	word2 8
+file2	word1 9
+file2	word9 7
+file3	word3 9
+file3	word4 8
+file3	word7 9
