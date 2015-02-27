@@ -1,3 +1,7 @@
+# Setup
+
+- [install scikit-learn and its dependencies](http://scikit-learn.org/stable/install.html)
+
 # Materialize an nltk corpus
 
 - find a corpus at http://nltk.googlecode.com/svn/trunk/nltk_data/index.xml, e.g. `inaugural`
