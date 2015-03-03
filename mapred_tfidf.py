@@ -117,15 +117,13 @@ if __name__ == '__main__':
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # join on words for cosine similarity
-    mru.run_map_reduce_job('word_join_map.py',
-                           'word_join_red.py'.format(precision),
+    mru.run_map_reduce_job('word_join_map.py', 'word_join_red.py',
                            tfidf_dir, word_join_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, sum up the products to get the cosine similarities
-    mru.run_map_reduce_job('cos_sim_map.py',
-                           'cos_sim_red.py'.format(precision),
+    mru.run_map_reduce_job('cos_sim_map.py', 'cos_sim_red.py',
                            word_join_dir, output_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)

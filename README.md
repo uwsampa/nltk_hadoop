@@ -50,6 +50,92 @@ with `nose` installed,
 nosetests
 ```
 
+# Write a new map / reduce job and run it
+Hadoop streaming accepts any command as a mapper or reducer, but to use the `map_reduce_utils` module, the basic pattern is as follows:
+
+first, write a mapper like the abstract one below:
+
+```python
+#!/usr/bin/env python
+
+import map_reduce_utils as mru
+import sys
+
+
+def mapper(input=sys.stdin, output=sys.stdout):
+    for in_key, in_value in mru.json_loader(input):
+        out_key = {}  # the key that is emitted by hadoop as json
+        out_value = {}  # the value that is emitted by hadoop as json
+        mru.mapper_emit(out_key, out_value, output)
+
+
+if __name__ == '__main__':
+   mapper()  # feel free to pass arguments here as well
+
+```
+
+then, write a reducer similar to:
+
+```python
+#!/usr/bin/env python
+
+import map_reduce_utils as mru
+import sys
+
+
+def reducer(input=mru.reducer_stream(), output=sys.stdout):
+    for in_key, key_stream in input:
+        values = []  # will contain each value associated with in_key
+        for in_value in key_stream:
+            values.append(in_value)
+        # now, values contains all of the values stored as Dicts, so we can
+        # do our "reduction" with arbitrary python. note that you don't need to
+        # store all of the in_values if, for example, we only need a running sum
+        out_key = {}  # the key that is emitted by hadoop as json
+        out_value = {}  # the value that is emitted by hadoop as json
+        mru.reducer_emit(out_key, out_value, output)
+        # you can also emit more than one key-value pairs here, for example
+        # one for each key-value pair where key = in_key:
+        for value in values:
+            out_key = {} # the key that is emitted by hadoop as json
+            out_value = {} # the value that is emitted by hadoop as json
+            mru.reducer_emit(out_key, out_value, output)
+
+
+if __name__ == '__main__':
+   reducer()  # feel free to pass arguments here as well
+```
+
+now, in your main driver (let's call it `run_hadoop.py` for future reference),
+invoke your mapper and reducer
+
+```python
+import  map_reduce_utils as mru
+
+# input_dir contains the lines piped into the reducer, output_dir is where the
+# results will be placed.
+mru.run_map_reduce_job('mapper.py', 'reducer.py', input_dir, output_dir)
+
+# note that we can pass arguments or arbitrary commands as mappers and reducers
+# and use the output of one job as the input of the next job to chain MR jobs
+
+mru.run_map_reduce_job('second_mapper.py --arg 1', 'wc -l',
+                        output_dir, second_MR_job_output_dir)
+
+```
+
+Before running the previous code, however, remember to define the
+appropriate environment variables. For example, in a shell, run:
+```sh
+source hadoop-streaming-env.sh
+python run_hadoop.py
+```
+
+Note that
+* You don't need to use avro and json. If you want, you can specify the input and output format when invoking `map_reduce_utils.run_map_reduce_job`, as well as the tokenizers for the generators in both the mapper and reducer.
+* You can run just a map job (i.e. no reducer) with `map_reduce_utils.run_map_job`
+* To see a concrete example of a mapper and reduer, look at `word_join_map.py` and `word_join_red.py`.
+* To see a concrete example of invoking a hadoop job, look at `mapred_tfidf.py`
 
 # The TFIDF Metric
 After cleaning and stemming a document, we obtain a list of words, `d`, for that document. The tfidf score of a word `w` in `d` is defined as follows:
