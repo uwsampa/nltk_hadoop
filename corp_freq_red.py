@@ -5,34 +5,26 @@ from sys import stdout
 import map_reduce_utils as mru
 
 
-KEYS = ['word']
-VALUES = ['filename', 'freq', 'size', 'count']
-
-
-def reduce_corpus_frequency(input=mru.reducer_stream(KEYS, VALUES),
-                            output=stdout):
+def reduce_corpus_frequency(input=mru.reducer_stream(), output=stdout):
     """
-    (word) (file_name n N 1) --> (word file_name) (n N m)
+    (word) (filename n N 1) --> (word filename) (n N m)
 
     sums up the number of occurences of each unique word throughout
     the corpus and emits this sum for each document that the word
     occurs in.
     """
-    for key, key_stream in input:
-        count = 0
+    for in_key, key_stream in input:
+        corpus_frequency = 0
         values = []
-        for value in key_stream:
-            count += int(value['count'])
-            values.append(value)
-        print_results(values, key['word'], count, output)
-
-
-def print_results(values, word, count, output):
-    template = '{0} {1}\t{2} {3} {4}'
-    for value in values:
-        result = template.format(word, value['filename'],
-                                 value['freq'], value['size'], count)
-        print(result, file=output)
+        for in_value in key_stream:
+            corpus_frequency += in_value['count']
+            values.append(in_value)
+        for value in values:
+            out_key = {'word': in_key['word'], 'filename': in_value['filename']}
+            out_value = {'word_freq': value['word_freq'],
+                         'doc_size': value['doc_size'],
+                         'corp_freq': corpus_frequency}
+            mru.reducer_emit(out_key, out_value, output)
 
 
 if __name__ == '__main__':

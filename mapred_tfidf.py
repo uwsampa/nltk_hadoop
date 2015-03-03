@@ -88,40 +88,44 @@ if __name__ == '__main__':
 
     # do an MR job to clean/stem file contents
     mru.run_map_job('contents_mapper.py',
-                    input_dir, clean_content_dir)
+                    input_dir, clean_content_dir,
+                    output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calcualte word frequency
-    mru.run_map_reduce_job('word_freq_map.py',
-                           'word_freq_red.py',
-                           clean_content_dir,
-                           word_frequency_dir)
+    mru.run_map_reduce_job('word_freq_map.py', 'word_freq_red.py',
+                           clean_content_dir, word_frequency_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # caclulate word count for each document
-    mru.run_map_reduce_job('word_count_map.py',
-                           'word_count_red.py',
-                           word_frequency_dir,
-                           word_count_dir)
+    mru.run_map_reduce_job('word_count_map.py', 'word_count_red.py',
+                           word_frequency_dir, word_count_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calculate word frequency in corpus
-    mru.run_map_reduce_job('corp_freq_map.py',
-                           'corp_freq_red.py',
-                           word_count_dir,
-                           corpus_frequency_dir)
+    mru.run_map_reduce_job('corp_freq_map.py', 'corp_freq_red.py',
+                           word_count_dir, corpus_frequency_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
-    tfidf_command_template = 'tf_idf_map.py -s {0} -p {1}'
-    mru.run_map_job(tfidf_command_template.format(corpus_len, precision),
-                    corpus_frequency_dir,
-                    tfidf_dir)
+    tfidf_command_template = 'tf_idf_map.py -s {0}'
+    mru.run_map_job(tfidf_command_template.format(corpus_len),
+                    corpus_frequency_dir, tfidf_dir,
+                    input_format=mru.AVRO_INPUT_FORMAT,
+                    output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # join on words for cosine similarity
     mru.run_map_reduce_job('word_join_map.py',
-                           'word_join_red.py -p {0}'.format(precision),
-                           tfidf_dir,
-                           word_join_dir)
+                           'word_join_red.py'.format(precision),
+                           tfidf_dir, word_join_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, sum up the products to get the cosine similarities
     mru.run_map_reduce_job('cos_sim_map.py',
-                           'cos_sim_red.py -p {0}'.format(precision),
-                           word_join_dir,
-                           output_dir)
+                           'cos_sim_red.py'.format(precision),
+                           word_join_dir, output_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)

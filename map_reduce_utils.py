@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as stopwords
 import string
@@ -8,11 +9,15 @@ import os
 import sys
 import shutil
 import subprocess
+import json
 
 """
 map_reduce_utils contains helper functions that are used in multiple
 map-reduce tasks.
 """
+
+KV_SEPARATOR = '\t'
+
 
 APACHE_LIB = 'org.apache.hadoop.mapred'
 
@@ -21,8 +26,11 @@ DEFAULT_OUTPUT_FORMAT = '{}.TextOutputFormat'.format(APACHE_LIB)
 
 AVRO_IO_LIB = 'org.apache.avro.mapred'
 
-AVRO_INPUT_FORMAT = "org.apache.avro.mapred.AvroAsTextInputFormat"
-AVRO_OUTPUT_FORMAT = "org.apache.avro.mapred.AvroTextOutputFormat"
+AVRO_INPUT_FORMAT = '{}.AvroAsTextInputFormat'.format(AVRO_IO_LIB)
+AVRO_OUTPUT_FORMAT = '{}.AvroTextOutputFormat'.format(AVRO_IO_LIB)
+
+# AVRO_INPUT_FORMAT = 'org.apache.avro.mapreduce.AvroKeyValueInputFormat'
+# AVRO_OUTPUT_FORMAT = 'org.apache.avro.mapreduce.AvroKeyValueOutputFormat'
 
 
 class MapReduceError(Exception):
@@ -38,7 +46,8 @@ class MapReduceError(Exception):
 
 def run_map_job(mapper, input_dir, output_dir,
                 input_format=DEFAULT_INPUT_FORMAT,
-                output_format=DEFAULT_OUTPUT_FORMAT):
+                output_format=DEFAULT_OUTPUT_FORMAT,
+                kv_separator=KV_SEPARATOR):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
@@ -49,14 +58,15 @@ def run_map_job(mapper, input_dir, output_dir,
       $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
          -files {0} \
          -libjars {1} \
-         -D mapred.job.reduces=0 \
-         -mapper "$NLTK_HOME/{2}" \
+         -D mapreduce.job.reduces=0 \
+         -D stream.map.output.field.separator={2} \
          -input $NLTK_HOME/{3} \
          -output $NLTK_HOME/{4} \
-         -inputformat {5} \
-         -outputformat {6}
-    '''.format(map_file + ",$AVRO_JAR", "$AVRO_JAR", mapper, input_dir,
-               output_dir,  input_format, output_format).strip()
+         -mapper "$NLTK_HOME/{5}" \
+         -inputformat {6} \
+         -outputformat {7}
+    '''.format(map_file + ",$AVRO_JAR", "$AVRO_JAR", kv_separator, input_dir,
+               output_dir, mapper, input_format, output_format).strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
@@ -65,7 +75,8 @@ def run_map_job(mapper, input_dir, output_dir,
 
 def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
                        input_format=DEFAULT_INPUT_FORMAT,
-                       output_format=DEFAULT_OUTPUT_FORMAT):
+                       output_format=DEFAULT_OUTPUT_FORMAT,
+                       kv_separator=KV_SEPARATOR):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
@@ -80,14 +91,15 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
       $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
          -files {0} \
          -libjars {1} \
-         -mapper "$NLTK_HOME/{2}" \
-         -reducer "$NLTK_HOME/{3}" \
-         -input $NLTK_HOME/{4} \
-         -output $NLTK_HOME/{5} \
-         -inputformat {6} \
-         -outputformat {7}
-    '''.format(files, "$AVRO_JAR", mapper, reducer, input_dir, output_dir,
-               input_format, output_format)
+         -D stream.map.output.field.separator={2} \
+         -mapper "$NLTK_HOME/{3}" \
+         -reducer "$NLTK_HOME/{4}" \
+         -input $NLTK_HOME/{5} \
+         -output $NLTK_HOME/{6} \
+         -inputformat {7} \
+         -outputformat {8}
+    '''.format(files, "$AVRO_JAR", kv_separator, mapper, reducer,
+               input_dir, output_dir, input_format, output_format)
     command = command.strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
@@ -128,6 +140,32 @@ def tokenize_key_value_pair(kv_pair):
     key = tuple(key.strip().split())
     value = tuple(value.strip().split())
     return (key, value)
+
+
+def tokenize_reducer_json(kv_pair):
+    kv_pair = json.loads(kv_pair)
+    key = kv_pair['key']
+    value = kv_pair['value']
+    return (key, value)
+
+
+def tokenize_mapper_json(kv_pair):
+    # fairly certain this is always a tab even when we change what the
+    # separator the mapper emits
+    key, value = kv_pair.strip().split('\t')
+    key = json.loads(key)
+    value = json.loads(value)
+    return {k: v for (k, v) in (key.items() + value.items())}
+
+
+def reducer_emit(key, value, output=sys.stdout):
+    print(json.dumps({'key': key, 'value': value}), file=output)
+
+
+def mapper_emit(key, value, output=sys.stdout, kv_separator=KV_SEPARATOR):
+    key_value = ''.join([json.dumps({'key': key}), kv_separator,
+                         json.dumps({'value': value})])
+    print(key_value, file=output)
 
 
 class KeyValueToDict:
@@ -208,24 +246,21 @@ class InputStreamWrapper:
         return not self.finished_function(self.peek)
 
 
-def reducer_stream(key_names, value_names,
-                   src=sys.stdin.readline,
-                   tokenizer=tokenize_key_value_pair):
+def reducer_stream(src=sys.stdin.readline, tokenizer=tokenize_mapper_json):
     """
     yields a key and a key_stream for each set of lines in src that have
     equal keys. Keys and values are tokenized with tokenizer and then stored
     in dictionaries so that the nth item in the key or value is indexed by the
     nth item in key_names or value_names, respectively.
     """
-    kv_converter = KeyValueToDict(key_names, value_names)
     source_stream = InputStreamWrapper(src)
     while source_stream.has_next():
-        key = kv_converter.to_dict(tokenizer(source_stream.peek()))['key']
-        yield (key, key_stream(source_stream, kv_converter.to_dict, tokenizer))
+        key = tokenizer(source_stream.peek())['key']
+        yield (key, key_stream(source_stream, tokenizer))
     raise StopIteration()
 
 
-def key_stream(src, dict_converter, tokenizer=tokenize_key_value_pair):
+def key_stream(src, tokenizer=tokenize_mapper_json):
     """
     yeilds values converted to dictionaries with dict_converter from
     src while the keys are the same.
@@ -237,7 +272,13 @@ def key_stream(src, dict_converter, tokenizer=tokenize_key_value_pair):
         if this_streams_key is None:
             this_streams_key = key
         if this_streams_key == key:
-            yield dict_converter(tokenizer(src.next()))['value']
+            yield tokenizer(src.next())['value']
         else:
             raise StopIteration()
+    raise StopIteration()
+
+
+def json_loader(input=sys.stdin, tokenizer=tokenize_reducer_json):
+    for line in input:
+        yield tokenizer(line)
     raise StopIteration()

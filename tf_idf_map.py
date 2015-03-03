@@ -3,10 +3,11 @@
 from __future__ import print_function
 import sys
 import argparse
+import map_reduce_utils as mru
 from math import log
 
 
-def map_tf_idf(corpus_size, precision, input=sys.stdin, output=sys.stdout):
+def map_tf_idf(corpus_size, input=sys.stdin, output=sys.stdout):
     """
     (word file_name) (n N m) --> (word file_name) (tfidf)
 
@@ -17,26 +18,21 @@ def map_tf_idf(corpus_size, precision, input=sys.stdin, output=sys.stdout):
     number of documents in the corpus that the word appears.
     """
 
-    template = '{0}\t{1:.{2}f}'
-
-    for line in input:
-        key, value = line.strip().split('\t')
-        n, N, m = value.strip().split()
-        n = int(n)
-        N = int(N)
-        m = int(m)
+    for in_key, in_value in mru.json_loader(input):
+        n = in_value['word_freq']
+        N = in_value['doc_size']
+        m = in_value['corp_freq']
         D = corpus_size
         tf = float(n) / float(N)
         idf = log((float(D) / float(m)), 10)
         tfidf = tf * idf
-        print(template.format(key, tfidf, precision), file=output)
+        # in_key == out_key
+        mru.reducer_emit(in_key, {'tfidf': tfidf}, output)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--corpus-size', '-s', dest='corpus_size')
-    parser.add_argument('--precision', '-p', dest='precision')
     args = parser.parse_args()
     corpus_size = args.corpus_size
-    precision = int(args.precision)
-    map_tf_idf(corpus_size, precision)
+    map_tf_idf(corpus_size)

@@ -1,18 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import argparse
 import sys
 import map_reduce_utils as mru
 
 
-KEYS = ['word']
-VALUES = ['filename', 'tfidf']
-
-
-def reduce_word_join(precision,
-                     input=mru.reducer_stream(KEYS, VALUES),
-                     output=sys.stdout):
+def reduce_word_join(input=mru.reducer_stream(), output=sys.stdout):
     """
     (word) (file_name tfidf) --> (word) (file1 file2 tfidf1*tfidf2)
 
@@ -25,25 +18,19 @@ def reduce_word_join(precision,
     pair of documents are multiplied together.
     """
 
-    for key, key_stream in input:
+    for in_key, key_stream in input:
         values = []
-        for value in key_stream:
-            values.append(value)
-        print_results(values, key['word'], precision, output)
+        for in_value in key_stream:
+            values.append(in_value)
+        for val1 in in_value:
+            for val2 in in_value:
+                if not val1['filename'] == val2['filename']:
+                    out_key = {'word': in_key['word']}
+                    out_value = {'file1': val1['filename'],
+                                 'file2': val2['filename'],
+                                 'product': val1['tfidf'] * val2['tfidf']}
+                    mru.reducer_emit(out_key, out_value, output)
 
-
-def print_results(values, word, precision, output):
-    template = '{0}\t{1} {2} {3:.{4}f}'
-    for doc1 in values:
-        for doc2 in values:
-            if doc1['filename'] != doc2['filename']:
-                product = float(doc1['tfidf']) * float(doc2['tfidf'])
-                result = template.format(word, doc1['filename'],
-                                         doc2['filename'], product, precision)
-                print(result, file=output)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--precision', '-p', dest='precision')
-    precision = int(parser.parse_args().precision)
-    reduce_word_join(precision)
+    reduce_word_join()
