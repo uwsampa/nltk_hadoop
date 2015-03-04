@@ -59,14 +59,13 @@ first, write a mapper like the abstract one below:
 #!/usr/bin/env python
 
 import map_reduce_utils as mru
-import sys
 
 
-def mapper(input=sys.stdin, output=sys.stdout):
-    for in_key, in_value in mru.json_loader(input):
+def mapper():
+    for in_key, in_value in mru.json_loader():
         out_key = {}  # the key that is emitted by hadoop as json
         out_value = {}  # the value that is emitted by hadoop as json
-        mru.mapper_emit(out_key, out_value, output)
+        mru.mapper_emit(out_key, out_value, sys.stdout)
 
 
 if __name__ == '__main__':
@@ -83,8 +82,8 @@ import map_reduce_utils as mru
 import sys
 
 
-def reducer(input=mru.reducer_stream(), output=sys.stdout):
-    for in_key, key_stream in input:
+def reducer():
+    for in_key, key_stream in mru.reducer_stream():
         values = []  # will contain each value associated with in_key
         for in_value in key_stream:
             values.append(in_value)
@@ -93,13 +92,13 @@ def reducer(input=mru.reducer_stream(), output=sys.stdout):
         # store all of the in_values if, for example, we only need a running sum
         out_key = {}  # the key that is emitted by hadoop as json
         out_value = {}  # the value that is emitted by hadoop as json
-        mru.reducer_emit(out_key, out_value, output)
+        mru.reducer_emit(out_key, out_value, sys.stdout)
         # you can also emit more than one key-value pairs here, for example
         # one for each key-value pair where key = in_key:
         for value in values:
             out_key = {} # the key that is emitted by hadoop as json
             out_value = {} # the value that is emitted by hadoop as json
-            mru.reducer_emit(out_key, out_value, output)
+            mru.reducer_emit(out_key, out_value, sys.stdout)
 
 
 if __name__ == '__main__':
