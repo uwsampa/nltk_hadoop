@@ -24,6 +24,7 @@ APACHE_LIB = 'org.apache.hadoop.mapred'
 DEFAULT_INPUT_FORMAT = '{}.TextInputFormat'.format(APACHE_LIB)
 DEFAULT_OUTPUT_FORMAT = '{}.TextOutputFormat'.format(APACHE_LIB)
 
+
 AVRO_IO_LIB = 'org.apache.avro.mapred'
 
 AVRO_INPUT_FORMAT = '{}.AvroAsTextInputFormat'.format(AVRO_IO_LIB)
@@ -149,13 +150,13 @@ def tokenize_reducer_json(kv_pair):
     return (key, value)
 
 
-def tokenize_mapper_json(kv_pair):
+def tokenize_mapper_json(kv_pair, kv_separator=KV_SEPARATOR):
     # fairly certain this is always a tab even when we change what the
     # separator the mapper emits
-    key, value = kv_pair.strip().split('\t')
+    key, value = kv_pair.strip().split(kv_separator)
     key = json.loads(key)
     value = json.loads(value)
-    return {k: v for (k, v) in (key.items() + value.items())}
+    return (key, value)
 
 
 def reducer_emit(key, value, output=sys.stdout):
@@ -163,8 +164,8 @@ def reducer_emit(key, value, output=sys.stdout):
 
 
 def mapper_emit(key, value, output=sys.stdout, kv_separator=KV_SEPARATOR):
-    key_value = ''.join([json.dumps({'key': key}), kv_separator,
-                         json.dumps({'value': value})])
+    key_value = ''.join([json.dumps(key), kv_separator,
+                         json.dumps(value)])
     print(key_value, file=output)
 
 
@@ -255,7 +256,7 @@ def reducer_stream(src=sys.stdin.readline, tokenizer=tokenize_mapper_json):
     """
     source_stream = InputStreamWrapper(src)
     while source_stream.has_next():
-        key = tokenizer(source_stream.peek())['key']
+        key = tokenizer(source_stream.peek())[0]
         yield (key, key_stream(source_stream, tokenizer))
     raise StopIteration()
 
@@ -272,7 +273,7 @@ def key_stream(src, tokenizer=tokenize_mapper_json):
         if this_streams_key is None:
             this_streams_key = key
         if this_streams_key == key:
-            yield tokenizer(src.next())['value']
+            yield tokenizer(src.next())[1]
         else:
             raise StopIteration()
     raise StopIteration()

@@ -15,7 +15,7 @@ def map_word_join(input=sys.stdin, output=sys.stdout):
 
     for in_key, in_value in mru.json_loader(input):
         out_key = {'word': in_key['word']}
-        out_value = {'filename': in_key['filename'], 'tfidf': in_value['tfidf']},
+        out_value = {'filename': in_key['filename'], 'tfidf': in_value['tfidf']}
         mru.mapper_emit(out_key, out_value, output)
 
 

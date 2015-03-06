@@ -21,7 +21,7 @@ def map_contents(input=sys.stdin, output=sys.stdout):
         contents = mru.clean_text(line)
         key = {'filename': docname}
         value = {'words': [word for word in contents]}
-        # we emit as if we were a reducer since the contents dont' get put
+        # we emit as if we were a reducer since the contents don't get put
         # through a reducer
         mru.reducer_emit(key, value, output)
 

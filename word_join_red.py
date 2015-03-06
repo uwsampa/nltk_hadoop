@@ -22,8 +22,8 @@ def reduce_word_join(input=mru.reducer_stream(), output=sys.stdout):
         values = []
         for in_value in key_stream:
             values.append(in_value)
-        for val1 in in_value:
-            for val2 in in_value:
+        for val1 in values:
+            for val2 in values:
                 if not val1['filename'] == val2['filename']:
                     out_key = {'word': in_key['word']}
                     out_value = {'file1': val1['filename'],

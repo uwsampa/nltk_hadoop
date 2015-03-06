@@ -20,7 +20,7 @@ def reduce_corpus_frequency(input=mru.reducer_stream(), output=stdout):
             corpus_frequency += in_value['count']
             values.append(in_value)
         for value in values:
-            out_key = {'word': in_key['word'], 'filename': in_value['filename']}
+            out_key = {'word': in_key['word'], 'filename': value['filename']}
             out_value = {'word_freq': value['word_freq'],
                          'doc_size': value['doc_size'],
                          'corp_freq': corpus_frequency}
