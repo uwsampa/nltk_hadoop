@@ -13,14 +13,24 @@ similarities for a set of documents. run with '--help' to
 see help and arguments.
 """
 
+# the directory where hadoop will read/write to
+WORK_DIR_PREFIX = 'results'
+
+
+def get_output_dir(sub_dir):
+    """
+    prepends the word directory prefix on the names of output directories
+    """
+    return WORK_DIR_PREFIX + '/' + sub_dir
+
 if __name__ == '__main__':
     # directories where we will store intermediate results
-    word_join_dir = 'joined_words'
-    tfidf_dir = 'tfidf'
-    corpus_frequency_dir = 'corpus_freq'
-    word_count_dir = 'word_count'
-    word_frequency_dir = 'word_freq'
-    clean_content_dir = 'file_contents'
+    word_join_dir = get_output_dir('joined_words')
+    tfidf_dir = get_output_dir('tfidf')
+    corpus_frequency_dir = get_output_dir('corpus_freq')
+    word_count_dir = get_output_dir('word_count')
+    word_frequency_dir = get_output_dir('word_freq')
+    clean_content_dir = get_output_dir('file_contents')
 
     directories = [clean_content_dir, word_frequency_dir,
                    word_count_dir, corpus_frequency_dir,
@@ -50,15 +60,21 @@ if __name__ == '__main__':
     parser.add_argument('--force', '-f', default=False, dest='force',
                         help=force_help, action='store_true')
 
-    precision_help = 'The number of digits of precision the results will be'
-    parser.add_argument('--precision', '-p', default=10, dest='precision',
-                        help=precision_help)
+    n_help = 'n value for n grams'
+    parser.add_argument('-n', default=2, dest='n', help=n_help, type=int)
+
+    # default stopwords list is in NLTK
+    stop_words_help = 'the list of stop words to filter out. If none, '
+    stop_words_help += 'sklearn.feature_extraction.text stop words are used'
+    parser.add_argument('-s', '--stop-words', default=None,
+                        help=stop_words_help, dest='stop_words')
 
     args = parser.parse_args()
     input_dir = args.input_dir
     output_dir = args.output_dir
     force = args.force
-    precision = args.precision
+    n = args.n
+    stop_words = args.stop_words
     directories.append(output_dir)
 
     dirs_to_overwrite = filter(os.path.exists, directories)
@@ -87,12 +103,15 @@ if __name__ == '__main__':
     corpus_len = len(corp_files)
 
     # do an MR job to clean/stem file contents
-    mru.run_map_job('contents_mapper.py',
-                    input_dir, clean_content_dir,
+    contents_mapper_cmd = 'contents_mapper.py'
+    if stop_words is not None:
+        contents_mapper_cmd += ' -s {}'.format(stop_words)
+    mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calcualte word frequency
-    mru.run_map_reduce_job('word_freq_map.py', 'word_freq_red.py',
+    mru.run_map_reduce_job('word_freq_map.py -n {}'.format(n),
+                           'word_freq_red.py',
                            clean_content_dir, word_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)

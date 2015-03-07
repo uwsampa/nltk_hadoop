@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 from nltk.stem.porter import PorterStemmer
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as stopwords
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as stop_words
 import string
 import re
 import os
@@ -109,7 +109,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
         raise MapReduceError(err_msg.format(mapper, reducer), e)
 
 
-def clean_text(text):
+def clean_text(text, stop_word_list=stop_words):
     """
     returns a 'cleaned' version of text by filtering out all words
     that don't contain strictly alphabetic characters, converting
@@ -127,7 +127,7 @@ def clean_text(text):
     result = filter(lambda word: is_alpha.match(word), result)
 
     result = [stemmer.stem(word) for word in result]
-    return filter(lambda word: word not in stopwords, result)
+    return filter(lambda word: word not in stop_word_list, result)
 
 
 def tokenize_key_value_pair(kv_pair):
