@@ -21,8 +21,8 @@ def map_word_frequency(input=sys.stdin, output=sys.stdout, gram_size=1):
         n = gram_size
         if n > len(words):
             n = len(words)
-        ngrams = [' '.join(map(lambda x: x, sub_seq)) for sub_seq in
-                  [words[i:i + n] for i in range(len(words) - n + 1)]]
+        ngrams = [' '.join(map(lambda x: x, words[i:i + n]))
+                  for i in range(len(words) - n + 1)]
         for ngram in ngrams:
             out_key = {'word': ngram, 'filename': filename}
             mru.mapper_emit(out_key, out_value, output)
