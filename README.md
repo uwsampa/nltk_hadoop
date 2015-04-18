@@ -9,9 +9,10 @@ python materialize_nltk_corpus.py inaugral
 
 # Set the appropriate environment variables
 ```sh
-source ./hadoop-streaming-env.sh
+source ./settings.sh
 ```
-or
+
+Or, just set the variables by hand:
 ```sh
 export HADOOP_VERSION=  # the version of hadoop you are using, e.g. 2.5.1
 export AVRO_VERSION=  # if you are using avro, the version, e.g. 1.7.7
@@ -20,6 +21,12 @@ export RELATIVE_PATH_JAR=  # location of hadoop streaming jar in HADOOP_HOME
 export NLTK_HOME=  # the location of your corpus, mappers and reducers
 export AVRO_JAR=  # if you are using avro, the jar location
 ```
+
+On the sampa cluster, you may also need to execute
+```
+source /shared/patents/settings.sh
+```
+in order to get hadoop, linux brew, python packages and nltk data to work.
 
 you may also want to ensure that the mapper and reducer scripts are executable
 
