@@ -103,7 +103,8 @@ if __name__ == '__main__':
     corpus_len = len(corp_files)
 
     # do an MR job to clean/stem file contents
-    contents_mapper_cmd = 'contents_mapper.py'
+    # contents_mapper_cmd = 'contents_mapper.py'
+    contents_mapper_cmd = 'claims_mapper.py'
     if stop_words is not None:
         contents_mapper_cmd += ' -s {}'.format(stop_words)
     mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,

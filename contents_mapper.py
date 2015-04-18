@@ -27,7 +27,6 @@ def map_contents(input=sys.stdin, output=sys.stdout, stop_words=None):
         value = {'words': [word for word in contents]}
         # we emit as if we were a reducer since the contents don't get put
         # through a reducer
-        print('??? kv', key, value, file=sys.stderr)
         mru.reducer_emit(key, value, output)
 
 
