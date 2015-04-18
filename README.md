@@ -133,7 +133,7 @@ mru.run_map_reduce_job('second_mapper.py --arg 1', 'wc -l',
 Before running the previous code, however, remember to define the
 appropriate environment variables. For example, in a shell, run:
 ```sh
-source hadoop-streaming-env.sh
+source settings.sh
 python run_hadoop.py
 ```
 
