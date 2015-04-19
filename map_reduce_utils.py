@@ -56,7 +56,7 @@ def run_map_job(mapper, input_dir, output_dir,
     if os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
     command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
+      $HADOOP_HOME/bin/hadoop jar hadoop-streaming-$HADOOP_VERSION.jar \
          -files {0} \
          -libjars {1} \
          -D mapreduce.job.reduces=0 \
@@ -89,7 +89,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
     # all of the additional files each node needs, comma separated
     files = map_file + ',' + red_file + ",$AVRO_JAR"
     command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
+      $HADOOP_HOME/bin/hadoop jar hadoop-streaming-$HADOOP_VERSION.jar \
          -files {0} \
          -libjars {1} \
          -D stream.map.output.field.separator={2} \
