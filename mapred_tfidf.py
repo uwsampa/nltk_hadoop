@@ -98,7 +98,8 @@ if __name__ == '__main__':
         raise e
 
     # we need the size of the corpus to do tfidf:
-    corp = './' + input_dir
+    # corp = './' + input_dir
+    corp = input_dir
     corp_files = [f for f in os.listdir(corp) if os.path.isfile(corp+'/'+f)]
     corpus_len = len(corp_files)
 
