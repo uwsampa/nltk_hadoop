@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# run this slurm script by executing:
+# sbatch /shared/patents/nltk-hadoop/slurm_hadoop_tfidf.sb
+# (or whatever the absolute path is)
+
+# sesarch for this to find it in `sinfo`
+#SBATCH --job-name=mapreduce_tfidf_patent_claims
+
+# request the hdfs name node and yarn manager
+#SBATCH --nodelist=n05
+
+HDFS_CLAIMS_PATH=hdfs:/shared/patents/claims_splits
+OUTPUT=hdfs:/shared/pattents
+
+# still need to pass customm stop words list here as well
+srun ./mapred_tfidf.py -f -i $HDFS_CLAIMS_PATH -o $OUTPUT
