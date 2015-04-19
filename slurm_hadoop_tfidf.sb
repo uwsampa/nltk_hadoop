@@ -8,7 +8,7 @@
 #SBATCH --job-name=mapreduce_tfidf_patent_claims
 
 # request the hdfs name node and yarn manager
-#SBATCH --nodelist=n05
+#SBATCH --nodelist=n05.sampa
 
 # need to get linuxbrew and associated env vars:
 source /shared/patents/settings.sh
