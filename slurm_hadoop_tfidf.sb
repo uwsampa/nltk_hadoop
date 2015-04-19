@@ -10,8 +10,11 @@
 # request the hdfs name node and yarn manager
 #SBATCH --nodelist=n05
 
+# need to get linuxbrew and associated env vars:
+source /shared/patents/settings.sh
+
 HDFS_CLAIMS_PATH=hdfs:/shared/patents/claims_splits
-OUTPUT=hdfs:/shared/pattents
+OUTPUT=hdfs:/shared/patents/similarities
 
 # still need to pass customm stop words list here as well
-srun ./mapred_tfidf.py -f -i $HDFS_CLAIMS_PATH -o $OUTPUT
+srun ./mapred_tfidf.py -i $HDFS_CLAIMS_PATH -o $OUTPUT
