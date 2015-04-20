@@ -26,15 +26,16 @@ def get_output_dir(sub_dir):
 if __name__ == '__main__':
     # directories where we will store intermediate results
     word_join_dir = get_output_dir('joined_words')
+    corpus_size_dir = get_output_dir('corpus_size')
     tfidf_dir = get_output_dir('tfidf')
     corpus_frequency_dir = get_output_dir('corpus_freq')
     word_count_dir = get_output_dir('word_count')
     word_frequency_dir = get_output_dir('word_freq')
     clean_content_dir = get_output_dir('file_contents')
 
-    directories = [clean_content_dir, word_frequency_dir,
-                   word_count_dir, corpus_frequency_dir,
-                   tfidf_dir, word_join_dir]
+    directories = [clean_content_dir, corpus_size_dir,
+                   word_frequency_dir, word_count_dir,
+                   corpus_frequency_dir, tfidf_dir, word_join_dir]
 
     desc = ''' computes the tf-idf cosine simiarity metric for a set
                of documents using map reduce streaming. Set appropriate
@@ -97,12 +98,6 @@ if __name__ == '__main__':
         print(err_msg, file=sys.stderr)
         raise e
 
-    # we need the size of the corpus to do tfidf:
-    # corp = './' + input_dir
-    corp = input_dir
-    corp_files = [f for f in os.listdir(corp) if os.path.isfile(corp+'/'+f)]
-    corpus_len = len(corp_files)
-
     # do an MR job to clean/stem file contents
     # contents_mapper_cmd = 'contents_mapper.py'
     contents_mapper_cmd = 'claims_mapper.py'
@@ -111,10 +106,18 @@ if __name__ == '__main__':
     mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
+
+    # calculate corpus size
+    mru.run_map_reduce_job('corpus_size_map.py', 'corpus_size_red.py',
+                           clean_content_dir, corpus_size_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
+
+
     # calcualte word frequency
     mru.run_map_reduce_job('word_freq_map.py -n {}'.format(n),
                            'word_freq_red.py',
-                           clean_content_dir, word_frequency_dir,
+                           corpus_size_dir, word_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
@@ -131,8 +134,8 @@ if __name__ == '__main__':
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
-    tfidf_command_template = 'tf_idf_map.py -s {0}'
-    mru.run_map_job(tfidf_command_template.format(corpus_len),
+    tfidf_command_template = 'tf_idf_map.py'
+    mru.run_map_job(tfidf_command_template,
                     corpus_frequency_dir, tfidf_dir,
                     input_format=mru.AVRO_INPUT_FORMAT,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
