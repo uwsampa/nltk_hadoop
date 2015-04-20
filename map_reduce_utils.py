@@ -66,8 +66,9 @@ def run_map_job(mapper, input_dir, output_dir,
          -mapper "$NLTK_HOME/{5}" \
          -inputformat {6} \
          -outputformat {7}
-    '''.format(map_file + ",$AVRO_JAR", "$AVRO_JAR", kv_separator, input_dir,
-               output_dir, mapper, input_format, output_format).strip()
+    '''.format(map_file + ",$AVRO_JAR,$HADOOP_JAR", "$AVRO_JAR,$HADOOP_JAR",
+               kv_separator, input_dir, output_dir, mapper,
+               input_format, output_format).strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
@@ -87,7 +88,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
         shutil.rmtree('./' + output_dir)
 
     # all of the additional files each node needs, comma separated
-    files = map_file + ',' + red_file + ",$AVRO_JAR"
+    files = map_file + ',' + red_file + ",$AVRO_JAR,$HADOOP_JAR"
     command = '''
       $yarn jar $HADOOP_JAR \
          -files {0} \
@@ -99,7 +100,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
          -output $NLTK_HOME/{6} \
          -inputformat {7} \
          -outputformat {8}
-    '''.format(files, "$AVRO_JAR", kv_separator, mapper, reducer,
+    '''.format(files, "$AVRO_JAR,$HADOOP_JAR", kv_separator, mapper, reducer,
                input_dir, output_dir, input_format, output_format)
     command = command.strip()
     try:

@@ -14,7 +14,7 @@ see help and arguments.
 """
 
 # the directory where hadoop will read/write to
-WORK_DIR_PREFIX = 'results'
+WORK_DIR_PREFIX = 'hdfs:///patents/'
 
 
 def get_output_dir(sub_dir):
@@ -78,6 +78,7 @@ if __name__ == '__main__':
     stop_words = args.stop_words
     directories.append(output_dir)
 
+    # obviously, this won't work if we're using hdfs
     dirs_to_overwrite = filter(os.path.exists, directories)
     if not force and len(dirs_to_overwrite) > 0:
         print('The following directories will be overwritten:')
