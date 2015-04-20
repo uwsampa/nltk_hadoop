@@ -61,8 +61,8 @@ def run_map_job(mapper, input_dir, output_dir,
          -libjars {1} \
          -D mapreduce.job.reduces=0 \
          -D stream.map.output.field.separator={2} \
-         -input $NLTK_HOME/{3} \
-         -output $NLTK_HOME/{4} \
+         -input {3} \
+         -output {4} \
          -mapper "$NLTK_HOME/{5}" \
          -inputformat {6} \
          -outputformat {7}
@@ -96,8 +96,8 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
          -D stream.map.output.field.separator={2} \
          -mapper "$NLTK_HOME/{3}" \
          -reducer "$NLTK_HOME/{4}" \
-         -input $NLTK_HOME/{5} \
-         -output $NLTK_HOME/{6} \
+         -input {5} \
+         -output {6} \
          -inputformat {7} \
          -outputformat {8}
     '''.format(files, "$AVRO_JAR,$HADOOP_JAR", kv_separator, mapper, reducer,
