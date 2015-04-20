@@ -53,10 +53,10 @@ def run_map_job(mapper, input_dir, output_dir,
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    if os.path.exists('./' + output_dir):
+    if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
     command = '''
-      yarn jar hadoop-streaming-$HADOOP_VERSION.jar \
+      yarn jar $HADOOP_JAR \
          -files {0} \
          -libjars {1} \
          -D mapreduce.job.reduces=0 \
@@ -83,13 +83,13 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
     # arguments to the mapper and reducer
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
     red_file = '$NLTK_HOME/' + reducer.strip().split()[0]
-    if os.path.exists('./' + output_dir):
+    if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
 
     # all of the additional files each node needs, comma separated
     files = map_file + ',' + red_file + ",$AVRO_JAR"
     command = '''
-      $yarn jar hadoop-streaming-$HADOOP_VERSION.jar \
+      $yarn jar $HADOOP_JAR \
          -files {0} \
          -libjars {1} \
          -D stream.map.output.field.separator={2} \
