@@ -94,7 +94,7 @@ if __name__ == '__main__':
     except KeyError as e:
         err_msg = '''
                   ERROR: environment variable NLTK_HOME undefined
-                  have you run "source hadoop-streaming-env.sh"?
+                  have you run "source settings.sh"?
                   '''
         print(err_msg, file=sys.stderr)
         raise e
