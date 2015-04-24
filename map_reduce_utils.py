@@ -63,7 +63,7 @@ def run_map_job(mapper, input_dir, output_dir,
          -D stream.map.output.field.separator={2} \
          -input {3} \
          -output {4} \
-         -mapper "$NLTK_HOME/{5}" \
+         -mapper "./invoke.sh $NLTK_HOME/{5}" \
          -inputformat {6} \
          -outputformat {7}
     '''.format(map_file + ",$AVRO_JAR,$HADOOP_JAR", "$AVRO_JAR,$HADOOP_JAR",
@@ -94,8 +94,8 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
          -files {0} \
          -libjars {1} \
          -D stream.map.output.field.separator={2} \
-         -mapper "$NLTK_HOME/{3}" \
-         -reducer "$NLTK_HOME/{4}" \
+         -mapper "./invoke.sh $NLTK_HOME/{3}" \
+         -reducer "./invoke.sh $NLTK_HOME/{4}" \
          -input {5} \
          -output {6} \
          -inputformat {7} \
