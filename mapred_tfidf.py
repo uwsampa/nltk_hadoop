@@ -14,7 +14,7 @@ see help and arguments.
 """
 
 # the directory where hadoop will read/write to
-WORK_DIR_PREFIX = 'hdfs:///patents/'
+WORK_DIR_PREFIX = 'hdfs:///patents'
 
 
 def get_output_dir(sub_dir):
