@@ -14,7 +14,7 @@ def map_claims(input=sys.stdin, output=sys.stdout, kv_delim=INPUT_KV_DELIM):
         contents = mru.clean_text(value)
         key = {'filename': patent_id}
         contents = {'words': [word for word in contents]}
-        mru.reducer_emit(patent_id, value, output)
+        mru.reducer_emit(patent_id, contents, output)
 
 
 if __name__ == '__main__':
