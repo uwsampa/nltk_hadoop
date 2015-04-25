@@ -55,6 +55,7 @@ def run_map_job(mapper, input_dir, output_dir,
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
     if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
+    files = map_file + ",$AVRO_JAR,$HADOOP_JAR,$NLTK_HOME/invoke.sh"
     command = '''
       yarn jar $HADOOP_JAR \
          -files {0} \
@@ -63,10 +64,10 @@ def run_map_job(mapper, input_dir, output_dir,
          -D stream.map.output.field.separator={2} \
          -input {3} \
          -output {4} \
-         -mapper "./invoke.sh $NLTK_HOME/{5}" \
+         -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{5}" \
          -inputformat {6} \
          -outputformat {7}
-    '''.format(map_file + ",$AVRO_JAR,$HADOOP_JAR", "$AVRO_JAR,$HADOOP_JAR",
+    '''.format(files, "$AVRO_JAR,$HADOOP_JAR",
                kv_separator, input_dir, output_dir, mapper,
                input_format, output_format).strip()
     try:
@@ -88,14 +89,15 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
         shutil.rmtree('./' + output_dir)
 
     # all of the additional files each node needs, comma separated
-    files = map_file + ',' + red_file + ",$AVRO_JAR,$HADOOP_JAR"
+    files = map_file + ',' + red_file + \
+            ",$AVRO_JAR,$HADOOP_JAR,$NLTK_HOME/invoke.sh"
     command = '''
       $yarn jar $HADOOP_JAR \
          -files {0} \
          -libjars {1} \
          -D stream.map.output.field.separator={2} \
-         -mapper "./invoke.sh $NLTK_HOME/{3}" \
-         -reducer "./invoke.sh $NLTK_HOME/{4}" \
+         -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{3}" \
+         -reducer "$NLTK_HOME/invoke.sh $NLTK_HOME/{4}" \
          -input {5} \
          -output {6} \
          -inputformat {7} \
