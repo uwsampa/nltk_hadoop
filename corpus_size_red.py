@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
+import sys
 import map_reduce_utils as mru
 
 
-def reduce_corpus_size():
+def reduce_corpus_size(input=sys.stdin, output=sys.stdout):
     for in_key, key_stream in input:
         patents = []
         for in_value in key_stream:
@@ -12,7 +13,7 @@ def reduce_corpus_size():
             out_key = {'filename': patent_key['filename'],
                        'corpus-size': len(patents)}
             out_value = patent_value
-            mru.reducer_emit(out_key, out_value)
+            mru.reducer_emit(out_key, out_value, output)
 
 
 if __name__ == '__main__':
