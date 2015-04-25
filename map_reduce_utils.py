@@ -92,7 +92,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
     files = map_file + ',' + red_file + \
             ",$AVRO_JAR,$HADOOP_JAR,$NLTK_HOME/invoke.sh"
     command = '''
-      $yarn jar $HADOOP_JAR \
+      yarn jar $HADOOP_JAR \
          -files {0} \
          -libjars {1} \
          -D stream.map.output.field.separator={2} \
