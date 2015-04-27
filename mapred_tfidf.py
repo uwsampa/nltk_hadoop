@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 exit()
             else:
                 to_delete = get_output_dir()
-                mru.hdfs_rm(to_delete)
+                mru.rm_hdfs(to_delete)
     else:
         # obviously, this won't work if we're using hdfs
         dirs_to_overwrite = filter(os.path.exists, directories)
