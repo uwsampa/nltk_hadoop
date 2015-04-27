@@ -93,7 +93,7 @@ if __name__ == '__main__':
             if response not in ['y', 'yes', 'Y', 'Yes']:
                 print('Exiting now')
                 exit()
-            else:
+        else:
                 to_delete = get_output_dir()
                 mru.rm_hdfs(to_delete)
                 # make a fresh empty dir
