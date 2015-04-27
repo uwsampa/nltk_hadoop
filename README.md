@@ -37,8 +37,18 @@ you may also want to ensure that the mapper and reducer scripts are executable
 ```sh
 ./mapred_tfidf --input INPUT_DIR --output OUTPUT_DIR
 ```
+
 * run with the `--help` flag to view all options
 * run with `--force` to automatically overwrite intermediate directories
+
+
+On the cluster, this can all be done by executing ./run.sh, which sets
+the appropriate environment variables as well as using the appropriate
+hdfs dirs:
+```bash
+cd /shared/patents/nltk-hadoop
+./run.sh
+```
 
 See the cosine similarities of all documents:
 ```sh

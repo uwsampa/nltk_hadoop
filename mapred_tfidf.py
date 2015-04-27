@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import argparse
 import sys
+import re
 import map_reduce_utils as mru
 
 
@@ -14,10 +15,10 @@ see help and arguments.
 """
 
 # the directory where hadoop will read/write to
-WORK_DIR_PREFIX = 'hdfs:///patents'
+WORK_DIR_PREFIX = 'hdfs:///patents/output'
 
 
-def get_output_dir(sub_dir):
+def get_output_dir(sub_dir=''):
     """
     prepends the word directory prefix on the names of output directories
     """
@@ -78,14 +79,30 @@ if __name__ == '__main__':
     stop_words = args.stop_words
     directories.append(output_dir)
 
-    # obviously, this won't work if we're using hdfs
-    dirs_to_overwrite = filter(os.path.exists, directories)
-    if not force and len(dirs_to_overwrite) > 0:
-        print('The following directories will be overwritten:')
-        print('\t', '\n\t'.join(dirs_to_overwrite))
-        response = raw_input('Continue? [y/n] ')
-        if response not in ['y', 'yes', 'Y', 'Yes']:
-            exit()
+    # whether or not we're working in hdfs
+    hdfs = map(lambda x: re.match('^hdfs://', x), [input_dir, output_dir])
+    hdfs = len([dir for dir in hdfs if dir is not None])
+
+    if hdfs:
+        if not force:
+            print('The following hdfs dirs will be overwritten:')
+            print('\t', '\n\t'.join(directories))
+            response = raw_input('Continue? [y/n] ')
+            if response not in ['y', 'yes', 'Y', 'Yes']:
+                print('Exiting now')
+                exit()
+            else:
+                to_delete = get_output_dir()
+                mru.hdfs_rm(to_delete)
+    else:
+        # obviously, this won't work if we're using hdfs
+        dirs_to_overwrite = filter(os.path.exists, directories)
+        if not force and len(dirs_to_overwrite) > 0:
+            print('The following directories will be overwritten:')
+            print('\t', '\n\t'.join(dirs_to_overwrite))
+            response = raw_input('Continue? [y/n] ')
+            if response not in ['y', 'yes', 'Y', 'Yes']:
+                exit()
 
     # check to see that environment variables have been set
     env = os.environ.copy()
@@ -104,6 +121,7 @@ if __name__ == '__main__':
     contents_mapper_cmd = 'claims_mapper.py'
     if stop_words is not None:
         contents_mapper_cmd += ' -s {}'.format(stop_words)
+    # need to tell yarn to send stop words file using -files
     mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
