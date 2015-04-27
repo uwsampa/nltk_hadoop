@@ -50,6 +50,11 @@ def rm_hdfs(dir):
     subprocess.check_call(command, env=os.environ.copy(), shell=True)
 
 
+def mkdir_hdfs(dir):
+    command = 'hdfs dfs -mkdir {}'.format(dir)
+    subprocess.check_call(command, env=os.environ.copy(), shell=True)
+
+
 def run_map_job(mapper, input_dir, output_dir, files='',
                 input_format=DEFAULT_INPUT_FORMAT,
                 output_format=DEFAULT_OUTPUT_FORMAT,

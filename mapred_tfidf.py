@@ -94,6 +94,8 @@ if __name__ == '__main__':
             else:
                 to_delete = get_output_dir()
                 mru.rm_hdfs(to_delete)
+                # make a fresh empty dir
+                mru.mkdir_hdfs(get_output_dir())
     else:
         # obviously, this won't work if we're using hdfs
         dirs_to_overwrite = filter(os.path.exists, directories)
@@ -121,9 +123,12 @@ if __name__ == '__main__':
     contents_mapper_cmd = 'claims_mapper.py'
     if stop_words is not None:
         contents_mapper_cmd += ' -s {}'.format(stop_words)
-    # need to tell yarn to send stop words file using -files
-    mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
-                    files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
+        # need to tell yarn to send stop words file using -files
+        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
+                        files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
+    else:
+        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
+                        output_format=mru.AVRO_OUTPUT_FORMAT)
 
 
     # calculate corpus size
