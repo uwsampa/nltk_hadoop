@@ -86,6 +86,8 @@ if __name__ == '__main__':
     if hdfs:
         if not force:
             print('The following hdfs dirs will be overwritten:')
+            to_delete = directories
+            to_delete.append(get_output_dir())
             print('\t', '\n\t'.join(directories))
             response = raw_input('Continue? [y/n] ')
             if response not in ['y', 'yes', 'Y', 'Yes']:
