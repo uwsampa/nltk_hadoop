@@ -123,7 +123,7 @@ if __name__ == '__main__':
         contents_mapper_cmd += ' -s {}'.format(stop_words)
     # need to tell yarn to send stop words file using -files
     mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
-                    output_format=mru.AVRO_OUTPUT_FORMAT)
+                    files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
 
 
     # calculate corpus size

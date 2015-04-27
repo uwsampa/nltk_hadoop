@@ -50,7 +50,7 @@ def rm_hdfs(dir):
     subprocess.check_call(command, env=os.environ.copy(), shell=True)
 
 
-def run_map_job(mapper, input_dir, output_dir,
+def run_map_job(mapper, input_dir, output_dir, files='',
                 input_format=DEFAULT_INPUT_FORMAT,
                 output_format=DEFAULT_OUTPUT_FORMAT,
                 kv_separator=KV_SEPARATOR):
@@ -60,7 +60,7 @@ def run_map_job(mapper, input_dir, output_dir,
     map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
     if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
-    files = map_file + ",$NLTK_HOME/invoke.sh"
+    files += map_file + ",$NLTK_HOME/invoke.sh"
     command = '''
       yarn jar $HADOOP_JAR \
          -files {0} \
@@ -81,7 +81,7 @@ def run_map_job(mapper, input_dir, output_dir,
         raise MapReduceError('Map job {0} failed'.format(mapper), e)
 
 
-def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
+def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
                        input_format=DEFAULT_INPUT_FORMAT,
                        output_format=DEFAULT_OUTPUT_FORMAT,
                        kv_separator=KV_SEPARATOR):
@@ -94,7 +94,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir,
         shutil.rmtree('./' + output_dir)
 
     # all of the additional files each node needs, comma separated
-    files = map_file + ',' + red_file + ',$NLTK_HOME/invoke.sh'
+    files += map_file + ',' + red_file + ',$NLTK_HOME/invoke.sh'
     command = '''
       yarn jar $HADOOP_JAR \
          -files {0} \
