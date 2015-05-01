@@ -5,6 +5,8 @@ import os
 import argparse
 import sys
 import re
+import subprocess
+import json
 import map_reduce_utils as mru
 
 
@@ -143,8 +145,15 @@ if __name__ == '__main__':
                            output_format=mru.AVRO_OUTPUT_FORMAT)
     # Now, parse the result to use later
     corpus_size_location = corpus_size_dir + 'part-00000.avro'
-    corpus_size_hdfs_command = 'hadoop fs -cat {}'.format(corpus_size_location)
-    # we're gonna need avro lib here?
+    corpus_size_cmd = 'hadoop fs -cat {}'.format(corpus_size_location)
+    corpus_size_output = subprocess.check_output(corpus_size_cmd,
+                                                 env=os.environ.copy(),
+                                                 shell=True)
+    # For now, don't try to parse output as avro. Just splice off the json.
+    # Yes, this is . . . bad. Fix it later.
+    corpus_size_json = corpus_size_output.split('{')[1].split('}')[0]
+    corpus_size_json = '{' + corpus_size_json + '}'
+    corpus_size = json.loads(corpus_size_json)['value']
 
 
     # calcualte word frequency
@@ -167,7 +176,7 @@ if __name__ == '__main__':
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
-    tfidf_command_template = 'tf_idf_map.py'
+    tfidf_command_template = 'tf_idf_map.py -s '.format(corpus_size)
     mru.run_map_job(tfidf_command_template,
                     corpus_frequency_dir, tfidf_dir,
                     input_format=mru.AVRO_INPUT_FORMAT,

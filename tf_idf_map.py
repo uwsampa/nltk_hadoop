@@ -7,7 +7,7 @@ import map_reduce_utils as mru
 from math import log
 
 
-def map_tf_idf(input=sys.stdin, output=sys.stdout):
+def map_tf_idf(corpus_size, input=sys.stdin, output=sys.stdout):
     """
     (word file_name) (n N m) --> (word file_name) (tfidf)
 
@@ -31,4 +31,7 @@ def map_tf_idf(input=sys.stdin, output=sys.stdout):
 
 
 if __name__ == '__main__':
-    map_tf_idf()
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    corpus_size = args.s
+    map_tf_idf(corpus_size)
