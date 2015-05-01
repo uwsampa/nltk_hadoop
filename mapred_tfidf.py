@@ -176,7 +176,7 @@ if __name__ == '__main__':
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
-    tfidf_command_template = 'tf_idf_map.py -s '.format(corpus_size)
+    tfidf_command_template = 'tf_idf_map.py -s {}'.format(corpus_size)
     mru.run_map_job(tfidf_command_template,
                     corpus_frequency_dir, tfidf_dir,
                     input_format=mru.AVRO_INPUT_FORMAT,
