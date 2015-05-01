@@ -144,7 +144,7 @@ if __name__ == '__main__':
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
     # Now, parse the result to use later
-    corpus_size_location = corpus_size_dir + 'part-00000.avro'
+    corpus_size_location = corpus_size_dir + '/part-00000.avro'
     corpus_size_cmd = 'hadoop fs -cat {}'.format(corpus_size_location)
     corpus_size_output = subprocess.check_output(corpus_size_cmd,
                                                  env=os.environ.copy(),
