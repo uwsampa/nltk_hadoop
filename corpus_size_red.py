@@ -8,10 +8,10 @@ def reduce_corpus_size(input=mru.reducer_stream(), output=sys.stdout):
     corpus_size = 0
     for in_key, key_stream in input:
         for in_value in key_stream:
-            corpus_size = 0
-    out_key = {['corpus size']}
-    out_value = {[corpus_size]}
-    mru.reducer_emit(out_key, out_value)
+            corpus_size += 1
+    out_key = 'corpus size'
+    out_value = corpus_size
+    mru.reducer_emit(out_key, out_value, output)
 
 
 if __name__ == '__main__':
