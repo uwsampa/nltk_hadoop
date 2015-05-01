@@ -4,7 +4,7 @@ import sys
 import map_reduce_utils as mru
 
 
-def reduce_corpus_size(input=sys.stdin, output=sys.stdout):
+def reduce_corpus_size(input=mru.reducer_stream(), output=sys.stdout):
     corpus_size = 0
     for in_key, key_stream in input:
         for in_value in key_stream:
