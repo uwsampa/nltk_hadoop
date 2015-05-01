@@ -134,16 +134,23 @@ if __name__ == '__main__':
 
 
     # calculate corpus size
+    # (The output here is a single number, since bringing through all of
+    # the claims led to too much mem usage) so we could run this concurrently
+    # with the next few jobs
     mru.run_map_reduce_job('corpus_size_map.py', 'corpus_size_red.py',
                            clean_content_dir, corpus_size_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
+    # Now, parse the result to use later
+    corpus_size_location = corpus_size_dir + 'part-00000.avro'
+    corpus_size_hdfs_command = 'hadoop fs -cat {}'.format(corpus_size_location)
+    # we're gonna need avro lib here?
 
 
     # calcualte word frequency
     mru.run_map_reduce_job('word_freq_map.py -n {}'.format(n),
                            'word_freq_red.py',
-                           corpus_size_dir, word_frequency_dir,
+                           clean_content_dir, word_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
