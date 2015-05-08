@@ -31,6 +31,7 @@ if __name__ == '__main__':
     word_join_dir = get_output_dir('joined_words')
     corpus_size_dir = get_output_dir('corpus_size')
     tfidf_dir = get_output_dir('tfidf')
+    normalized_tfidf_dir = get_output_dir('tfidf_normalized')
     corpus_frequency_dir = get_output_dir('corpus_freq')
     word_count_dir = get_output_dir('word_count')
     word_frequency_dir = get_output_dir('word_freq')
@@ -182,14 +183,21 @@ if __name__ == '__main__':
                     input_format=mru.AVRO_INPUT_FORMAT,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    # join on words for cosine similarity
-    mru.run_map_reduce_job('word_join_map.py', 'word_join_red.py',
-                           tfidf_dir, word_join_dir,
+    mru.run_map_reduce_job('normalize_mapper.py', 'normalize_reducer.py',
+                           tfidf_dir, normalized_tfidf_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    # now, sum up the products to get the cosine similarities
-    mru.run_map_reduce_job('cos_sim_map.py', 'cos_sim_red.py',
-                           word_join_dir, output_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
+
+    # we're not using hadoop for this dot product any more
+    # # join on words for cosine similarity
+    # mru.run_map_reduce_job('word_join_map.py', 'word_join_red.py',
+    #                        tfidf_dir, word_join_dir,
+    #                        input_format=mru.AVRO_INPUT_FORMAT,
+    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
+
+    # # now, sum up the products to get the cosine similarities
+    # mru.run_map_reduce_job('cos_sim_map.py', 'cos_sim_red.py',
+    #                        word_join_dir, output_dir,
+    #                        input_format=mru.AVRO_INPUT_FORMAT,
+    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
