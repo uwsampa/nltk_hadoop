@@ -24,10 +24,14 @@ def map_tf_idf(corpus_size, input=sys.stdin, output=sys.stdout):
         m = in_value['corp_freq']
         D = corpus_size
         tf = float(n) / float(N)
-        idf = log((float(D) / float(m)), 10)
-        tfidf = tf * idf
+        idf = (float(D) / float(m))
+        log_idf = log(idf, 10)
+        tfidf = tf * log_idf
         # in_key == out_key
-        mru.reducer_emit(in_key, {'tfidf': tfidf}, output)
+        out_key = {'tfidf': tfidf, 'log idf': log_idf, 'idf': idf, 'tf': tf,
+                   'word frequency': n, 'document length': N,
+                   'corpus frequency': m, 'corpus size': D}
+        mru.reducer_emit(in_key, out_key, output)
 
 
 if __name__ == '__main__':
