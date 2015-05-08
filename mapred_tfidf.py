@@ -96,11 +96,10 @@ if __name__ == '__main__':
             if response not in ['y', 'yes', 'Y', 'Yes']:
                 print('Exiting now')
                 exit()
-        else:
-                to_delete = get_output_dir()
-                mru.rm_hdfs(to_delete)
-                # make a fresh empty dir
-                mru.mkdir_hdfs(get_output_dir())
+        to_delete = get_output_dir()
+        mru.rm_hdfs(to_delete)
+        # make a fresh empty dir
+        mru.mkdir_hdfs(get_output_dir())
     else:
         # obviously, this won't work if we're using hdfs
         dirs_to_overwrite = filter(os.path.exists, directories)
