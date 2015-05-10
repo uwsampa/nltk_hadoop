@@ -12,8 +12,10 @@ I'm putting stuff in here rather than map_reduce_utils.py for now because
 
 """
 
+SAMPA_HDFS_URL = 'hdfs://hadoop.sampa'
 
-def hdfs_file_contents(filepath, url='localhost'):
+
+def hdfs_file_contents(filepath, url=SAMPA_HDFS_URL):
     """
     generates each part of each file in filepath
     """
@@ -23,6 +25,6 @@ def hdfs_file_contents(filepath, url='localhost'):
     raise StopIteration()
 
 
-def hdfs_append_to_file(filepath, text_to_append, url='localhost'):
+def hdfs_append_to_file(filepath, text_to_append, url=SAMPA_HDFS_URL):
     client = hdfs.client.InsecureClient(url)
     client.append(filepath, text_to_append)
