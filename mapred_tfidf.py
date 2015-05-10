@@ -39,7 +39,8 @@ if __name__ == '__main__':
 
     directories = [clean_content_dir, corpus_size_dir,
                    word_frequency_dir, word_count_dir,
-                   corpus_frequency_dir, tfidf_dir, word_join_dir]
+                   corpus_frequency_dir, tfidf_dir,
+                   word_join_dir, normalized_tfidf_dir]
 
     desc = ''' computes the tf-idf cosine simiarity metric for a set
                of documents using map reduce streaming. Set appropriate

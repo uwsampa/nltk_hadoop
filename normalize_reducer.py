@@ -16,16 +16,10 @@ def normalize_reducer(input=mru.reducer_stream(), output=sys.stdout,
             terms_to_normalize.append(in_value)
             normalization_factors = {k: normalization_factors[k] + in_value[k]
                                      for k, v in normalization_factors.iteritems()}
-            # normalization_factors = map(lambda x:
-            #                             normalization_factors[x] + in_value[x],
-            #                             normalization_factors)
         for term in terms_to_normalize:
             out_key = {'uid': in_key['uid'], 'ngram': in_value['ngram']}
             out_value = term
             for key in keys_to_normalize:
-                print('normalizing key:', key, file=sys.stderr)
-                print('normalization factor:', normalization_factors[key],
-                      file=sys.stderr)
                 out_value[key] /= normalization_factors[key]
             mru.reducer_emit(out_key, out_value, output)
 
