@@ -29,11 +29,11 @@ def map_tf_idf(corpus_size, input=sys.stdin, output=sys.stdout):
         tfidf = tf * idf
         tf_log_idf = tf * log_idf
         # in_key == out_key
-        out_key = {'tfidf': tfidf, 'tf log idf': tf_log_idf,
-                   'log idf': log_idf, 'idf': idf, 'tf': tf,
-                   'word frequency': n, 'document length': N,
-                   'corpus frequency': m, 'corpus size': D}
-        mru.reducer_emit(in_key, out_key, output)
+        out_value = {'tfidf': tfidf, 'tf log idf': tf_log_idf,
+                     'log idf': log_idf, 'idf': idf, 'tf': tf,
+                     'word frequency': n, 'document length': N,
+                     'corpus frequency': m, 'corpus size': D}
+        mru.reducer_emit(in_key, out_value, output)
 
 
 if __name__ == '__main__':
