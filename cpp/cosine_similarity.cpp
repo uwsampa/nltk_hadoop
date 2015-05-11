@@ -1,7 +1,7 @@
 //
 // Compute cosine similarity between incidence matrix stored in HDFS Avro files.
 //
-// Run with command like "/run-with-classpath.sh  ./cosine_similarity /patents/output/tfidf"
+// Run with command like "/srun-with-classpath.sh  ./cosine_similarity --json_base=/patents/output/tfidf --result_file=/shared/patents/cosinesim.tsv"
 //
 
 #include <algorithm>
