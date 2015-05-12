@@ -29,6 +29,7 @@ LDLIBS=\
 	-lhdfs \
 	-lboost_iostreams \
 	-lpthread     \
+	-lsqlite3     \
 	-lcrypto      \
 	-lssl
 
