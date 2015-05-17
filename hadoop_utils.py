@@ -65,7 +65,6 @@ def hdfs_write_to_file(filepath, content, url=SAMPA_HDFS_URL):
     # may need to set overwrite option here
     client = hdfs_client_connection(url=url)
     client.write(filepath, content)
-    client.close()
 
 
 def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
@@ -78,6 +77,8 @@ def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
         if str(e) == 'File /{} not found.'.format(filepath):
             # write creates neccessary dirs / files
             hdfs_write_to_file(filepath, '', url)
+
+def avro_file_contents(filepath, )
 
 
 def main():
