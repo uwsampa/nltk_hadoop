@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import avro.io
+import fastavro
 import hdfs
 import json
 
@@ -77,8 +77,6 @@ def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
         if str(e) == 'File /{} not found.'.format(filepath):
             # write creates neccessary dirs / files
             hdfs_write_to_file(filepath, '', url)
-
-def avro_file_contents(filepath, )
 
 
 def main():
