@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-import fastavro
+import hdfs.ext.avro
 import hdfs
-import json
 
 
 """
@@ -42,7 +41,6 @@ def hdfs_dir_contents(directory, url=SAMPA_HDFS_URL, buffer_char='\n'):
     """
     client = hdfs_client_connection(url=url)
     part_files = client.parts(directory)
-    print part_files
     for part_file in part_files:
         for line in hdfs_file_contents(part_file):
             yield line
@@ -79,6 +77,13 @@ def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
             hdfs_write_to_file(filepath, '', url)
 
 
+def hdfs_avro_records_file_content(filepath, url=SAMPA_HDFS_URL):
+    client = hdfs_client_connection(url=url)
+    avro_reader = hdfs.ext.avro.AvroReader(client, filepath)
+    for record in avro_reader.records:
+        yield record
+
+
 def main():
     # example usage:
 
@@ -99,6 +104,9 @@ def main():
     # lines = hdfs_dir_contents(hdfs_filepath)
     # first_line = lines.next()
     # print first_line
+    # now, do an avro file
+    # a = hdfs_avro_records_file_content('patents/output/tfidf')
+    # print a.next()
     pass
 
 
