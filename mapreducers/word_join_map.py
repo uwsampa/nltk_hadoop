@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import sys
+import map_reduce_utils as mru
 
 
 def map_word_join(input=sys.stdin, output=sys.stdout):
@@ -12,11 +13,10 @@ def map_word_join(input=sys.stdin, output=sys.stdout):
     and the filename and tfidf score as the value
     """
 
-    template = '{}\t{} {}'
-    for line in input:
-        key, value = line.strip().split('\t')
-        word, doc = key.strip().split()
-        print(template.format(word, doc, value), file=output)
+    for in_key, in_value in mru.json_loader(input):
+        out_key = {'word': in_key['word']}
+        out_value = {'filename': in_key['filename'], 'tfidf': in_value['tfidf']}
+        mru.mapper_emit(out_key, out_value, output)
 
 
 if __name__ == '__main__':

@@ -2,10 +2,13 @@
 
 from __future__ import print_function
 import os
-import subprocess
 import argparse
-import shutil
 import sys
+import re
+import subprocess
+import json
+import map_reduce_utils as mru
+
 
 """
 The main runnable script to produce tfidf scores and cosine
@@ -13,77 +16,34 @@ similarities for a set of documents. run with '--help' to
 see help and arguments.
 """
 
+# the directory where hadoop will read/write to
+WORK_DIR_PREFIX = 'hdfs:///patents/output'
 
-class MapReduceError(Exception):
-    """ error raised when a map reduce job fails"""
-
-    def __init__(self, value, source):
-        self.value = value
-        self.source = source
-
-    def __str__(self):
-        return repr(self.value)
+# the directory where we store our mappers/reducers
+PYTHON_MAPRED_BIN_DIR = 'mapreducers/'
 
 
-def run_map_job(mapper, input_dir, output_dir):
-    env = os.environ.copy()
-    # we have to pass the specific files as well to allow for
-    # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    map_file = mapper.strip().split()[0]
-    if os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
-    command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
-         -D mapred.job.reduces=0 \
-         -mapper "$NLTK_HOME/{0}" \
-         -input $NLTK_HOME/{1} \
-         -output $NLTK_HOME/{2} \
-         -file {3}\
-    '''.format(mapper, input_dir, output_dir, map_file).strip()
-
-    try:
-        subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError as e:
-        raise MapReduceError('Map job {0} failed'.format(mapper), e)
-
-
-def run_map_reduce_job(mapper, reducer, input_dir, output_dir):
-    env = os.environ.copy()
-    # we have to pass the specific files as well to allow for
-    # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    red_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    if os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
-    command = '''
-      $HADOOP_HOME/bin/hadoop jar $HADOOP_HOME/$RELATIVE_PATH_JAR \
-         -mapper "$NLTK_HOME/{0}" \
-         -reducer "$NLTK_HOME/{1}" \
-         -input $NLTK_HOME/{2} \
-         -output $NLTK_HOME/{3} \
-         -file {4} \
-         -file {5}
-    '''.format(mapper, reducer, input_dir, output_dir, map_file, red_file)
-    command = command.strip()
-    try:
-        subprocess.check_call(command, env=env, shell=True)
-    except subprocess.CalledProcessError as e:
-        err_msg = 'ERROR: Map-Reduce job {0}, {1} failed'
-        raise MapReduceError(err_msg.format(mapper, reducer), e)
+def get_output_dir(sub_dir=''):
+    """
+    prepends the word directory prefix on the names of output directories
+    """
+    return WORK_DIR_PREFIX + '/' + sub_dir
 
 if __name__ == '__main__':
     # directories where we will store intermediate results
-    word_join_dir = 'joined_words'
-    tfidf_dir = 'tfidf'
-    corpus_frequency_dir = 'corpus_freq'
-    word_count_dir = 'word_count'
-    word_frequency_dir = 'word_freq'
-    clean_content_dir = 'file_contents'
+    word_join_dir = get_output_dir('joined_words')
+    corpus_size_dir = get_output_dir('corpus_size')
+    tfidf_dir = get_output_dir('tfidf')
+    normalized_tfidf_dir = get_output_dir('tfidf_normalized')
+    corpus_frequency_dir = get_output_dir('corpus_freq')
+    word_count_dir = get_output_dir('word_count')
+    word_frequency_dir = get_output_dir('word_freq')
+    clean_content_dir = get_output_dir('file_contents')
 
-    directories = [clean_content_dir, word_frequency_dir,
-                   word_count_dir, corpus_frequency_dir,
-                   tfidf_dir, word_join_dir]
+    directories = [clean_content_dir, corpus_size_dir,
+                   word_frequency_dir, word_count_dir,
+                   corpus_frequency_dir, tfidf_dir,
+                   word_join_dir, normalized_tfidf_dir]
 
     desc = ''' computes the tf-idf cosine simiarity metric for a set
                of documents using map reduce streaming. Set appropriate
@@ -109,24 +69,50 @@ if __name__ == '__main__':
     parser.add_argument('--force', '-f', default=False, dest='force',
                         help=force_help, action='store_true')
 
-    precision_help = 'The number of digits of precision the results will be'
-    parser.add_argument('--precision', '-p', default=10, dest='precision',
-                        help=precision_help)
+    n_help = 'n value for n grams'
+    parser.add_argument('-n', default=2, dest='n', help=n_help, type=int)
+
+    # default stopwords list is in NLTK
+    stop_words_help = 'the list of stop words to filter out. If none, '
+    stop_words_help += 'sklearn.feature_extraction.text stop words are used'
+    parser.add_argument('-s', '--stop-words', default=None,
+                        help=stop_words_help, dest='stop_words')
 
     args = parser.parse_args()
     input_dir = args.input_dir
     output_dir = args.output_dir
     force = args.force
-    precision = args.precision
+    n = args.n
+    stop_words = args.stop_words
     directories.append(output_dir)
 
-    dirs_to_overwrite = filter(os.path.exists, directories)
-    if not force and len(dirs_to_overwrite) > 0:
-        print('The following directories will be overwritten:')
-        print('\t', '\n\t'.join(dirs_to_overwrite))
-        response = raw_input('Continue? [y/n] ')
-        if response not in ['y', 'yes', 'Y', 'Yes']:
-            exit()
+    # whether or not we're working in hdfs
+    hdfs = map(lambda x: re.match('^hdfs://', x), [input_dir, output_dir])
+    hdfs = len([dir for dir in hdfs if dir is not None])
+
+    if hdfs:
+        if not force:
+            print('The following hdfs dirs will be overwritten:')
+            to_delete = directories
+            to_delete.append(get_output_dir())
+            print('\t', '\n\t'.join(directories))
+            response = raw_input('Continue? [y/n] ')
+            if response not in ['y', 'yes', 'Y', 'Yes']:
+                print('Exiting now')
+                exit()
+        to_delete = get_output_dir()
+        mru.rm_hdfs(to_delete)
+        # make a fresh empty dir
+        mru.mkdir_hdfs(get_output_dir())
+    else:
+        # obviously, this won't work if we're using hdfs
+        dirs_to_overwrite = filter(os.path.exists, directories)
+        if not force and len(dirs_to_overwrite) > 0:
+            print('The following directories will be overwritten:')
+            print('\t', '\n\t'.join(dirs_to_overwrite))
+            response = raw_input('Continue? [y/n] ')
+            if response not in ['y', 'yes', 'Y', 'Yes']:
+                exit()
 
     # check to see that environment variables have been set
     env = os.environ.copy()
@@ -135,50 +121,91 @@ if __name__ == '__main__':
     except KeyError as e:
         err_msg = '''
                   ERROR: environment variable NLTK_HOME undefined
-                  have you run "source hadoop-streaming-env.sh"?
+                  have you run "source settings.sh"?
                   '''
         print(err_msg, file=sys.stderr)
         raise e
 
-    # we need the size of the corpus to do tfidf:
-    corp = './' + input_dir
-    corp_files = [f for f in os.listdir(corp) if os.path.isfile(corp+'/'+f)]
-    corpus_len = len(corp_files)
-
     # do an MR job to clean/stem file contents
-    run_map_job('contents_mapper.py', input_dir, clean_content_dir)
+    # contents_mapper_cmd = 'contents_mapper.py'
+    contents_mapper_cmd = PYTHON_MAPRED_BIN_DIR + 'claims_mapper.py'
+    if stop_words is not None:
+        contents_mapper_cmd += ' -s {}'.format(stop_words)
+        # need to tell yarn to send stop words file using -files
+        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
+                        files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
+    else:
+        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
+                        output_format=mru.AVRO_OUTPUT_FORMAT)
+
+
+    # calculate corpus size
+    # (The output here is a single number, since bringing through all of
+    # the claims led to too much mem usage) so we could run this concurrently
+    # with the next few jobs
+    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'corpus_size_map.py',
+                           PYTHON_MAPRED_BIN_DIR + 'corpus_size_red.py',
+                           clean_content_dir, corpus_size_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
+    # Now, parse the result to use later
+    corpus_size_location = corpus_size_dir + '/part-00000.avro'
+    corpus_size_cmd = 'hadoop fs -cat {}'.format(corpus_size_location)
+    corpus_size_output = subprocess.check_output(corpus_size_cmd,
+                                                 env=os.environ.copy(),
+                                                 shell=True)
+    # For now, don't try to parse output as avro. Just splice off the json.
+    # Yes, this is . . . bad. Fix it later.
+    corpus_size_json = corpus_size_output.split('{')[1].split('}')[0]
+    corpus_size_json = '{' + corpus_size_json + '}'
+    corpus_size = json.loads(corpus_size_json)['value']
+
 
     # calcualte word frequency
-    run_map_reduce_job('word_freq_map.py',
-                       'word_freq_red.py',
-                       clean_content_dir,
-                       word_frequency_dir)
+    word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n),
+    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + word_freq_map_cmd,
+                           PYTHON_MAPRED_BIN_DIR + 'word_freq_red.py',
+                           clean_content_dir, word_frequency_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # caclulate word count for each document
-    run_map_reduce_job('word_count_map.py',
-                       'word_count_red.py',
-                       word_frequency_dir,
-                       word_count_dir)
+    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'word_count_map.py',
+                           PYTHON_MAPRED_BIN_DIR + 'word_count_red.py',
+                           word_frequency_dir, word_count_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calculate word frequency in corpus
-    run_map_reduce_job('corp_freq_map.py',
-                       'corp_freq_red.py',
-                       word_count_dir,
-                       corpus_frequency_dir)
+    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'corp_freq_map.py',
+                           PYTHON_MAPRED_BIN_DIR + 'corp_freq_red.py',
+                           word_count_dir, corpus_frequency_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
-    run_map_job('tf_idf_map.py -s {0} -p {1}'.format(corpus_len, precision),
-                corpus_frequency_dir,
-                tfidf_dir)
+    tfidf_command_template = 'tf_idf_map.py -s {}'.format(corpus_size)
+    mru.run_map_job(PYTHON_MAPRED_BIN_DIR + tfidf_command_template,
+                    corpus_frequency_dir, tfidf_dir,
+                    input_format=mru.AVRO_INPUT_FORMAT,
+                    output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    # join on words for cosine similarity
-    run_map_reduce_job('word_join_map.py',
-                       'word_join_red.py -p {0}'.format(precision),
-                       tfidf_dir,
-                       word_join_dir)
+    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'normalize_mapper.py',
+                           PYTHON_MAPRED_BIN_DIR + 'normalize_reducer.py',
+                           tfidf_dir, normalized_tfidf_dir,
+                           input_format=mru.AVRO_INPUT_FORMAT,
+                           output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    # now, sum up the products to get the cosine similarities
-    run_map_reduce_job('cos_sim_map.py',
-                       'cos_sim_red.py -p {0}'.format(precision),
-                       word_join_dir,
-                       output_dir)
+
+    # we're not using hadoop for this dot product any more
+    # # join on words for cosine similarity
+    # mru.run_map_reduce_job('word_join_map.py', 'word_join_red.py',
+    #                        tfidf_dir, word_join_dir,
+    #                        input_format=mru.AVRO_INPUT_FORMAT,
+    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
+
+    # # now, sum up the products to get the cosine similarities
+    # mru.run_map_reduce_job('cos_sim_map.py', 'cos_sim_red.py',
+    #                        word_join_dir, output_dir,
+    #                        input_format=mru.AVRO_INPUT_FORMAT,
+    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
