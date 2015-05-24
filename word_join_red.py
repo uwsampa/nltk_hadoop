@@ -1,44 +1,49 @@
 #!/usr/bin/env python
+
+from __future__ import print_function
+import argparse
 import sys
-
-"""
-(word) (file_name tfidf) --> (word) (file1 file2 tfidf1*tfidf2)
-
-for each word, if two distinct documents both contain that word,
-a line is emitted containing the product of the tfidf scores of that
-word in both documents.
-
-This is the first step in computing the pairwise dot product of the tf-idf
-vectors between all documents, where the corresponding elements for every
-pair of documents are multiplied together.
-"""
-
-cur_word = None
-word = None
-matching_docs = []
+from map_reduce_utils import reducer_stream
 
 
-def print_results(docs, word):
-    for doc1 in docs:
-        for doc2 in docs:
-            if doc1 != doc2:
-                print '%s\t%s %s %.16f' % (word, doc1[0], doc2[0],
-                                           doc1[1]*doc2[1])
+KEYS = ['word']
+VALUES = ['filename', 'tfidf']
 
 
-for line in sys.stdin:
-    key, value = line.strip().split('\t')
-    word = key.strip()
-    filename, tfidf = value.strip().split()
-    tfidf = float(tfidf)
-    if word == cur_word:
-        matching_docs.append((filename, tfidf))
-    else:
-        if cur_word is not None:
-            print_results(matching_docs, cur_word)
-        cur_word = word
-        matching_docs = []
-        matching_docs.append((filename, tfidf))
+def reduce_word_join(precision,
+                     input=reducer_stream(KEYS, VALUES),
+                     output=sys.stdout):
+    """
+    (word) (file_name tfidf) --> (word) (file1 file2 tfidf1*tfidf2)
 
-if cur_word is not None:
-    print_results(matching_docs, cur_word)
+    for each word, if two distinct documents both contain that word,
+    a line is emitted containing the product of the tfidf scores of that
+    word in both documents.
+
+    This is the first step in computing the pairwise dot product of the tf-idf
+    vectors between all documents, where the corresponding elements for every
+    pair of documents are multiplied together.
+    """
+
+    for key, key_stream in input:
+        values = []
+        for value in key_stream:
+            values.append(value)
+        print_results(values, key['word'], precision, output)
+
+
+def print_results(values, word, precision, output):
+    template = '{0}\t{1} {2} {3:.{4}f}'
+    for doc1 in values:
+        for doc2 in values:
+            if doc1['filename'] != doc2['filename']:
+                product = float(doc1['tfidf']) * float(doc2['tfidf'])
+                result = template.format(word, doc1['filename'],
+                                         doc2['filename'], product, precision)
+                print(result, file=output)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--precision', '-p', dest='precision')
+    precision = int(parser.parse_args().precision)
+    reduce_word_join(precision)

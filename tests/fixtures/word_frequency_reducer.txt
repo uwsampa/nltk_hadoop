@@ -1,0 +1,6 @@
+word1 file1	1
+word1 file1	1
+word1 file2	1
+word2 file2	1
+word2 file3	1
+word3 file3	1

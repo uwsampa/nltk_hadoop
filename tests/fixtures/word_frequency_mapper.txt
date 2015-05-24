@@ -1,0 +1,2 @@
+file1	word1 word2 word3
+file2	word4 word5 word6

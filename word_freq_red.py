@@ -1,31 +1,32 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+from map_reduce_utils import reducer_stream
 import sys
 
-"""
-(word file_name) (1) --> (word file_name) (n)
+KEYS = ['word', 'filename']
+VALUES = ['count']
 
-sums up the number of occurences of each word in each file and emits
-the result for each word/filename combination
-"""
 
-cur_word = None
-cur_file = None
-cur_count = 0
-word = None
+def reduce_word_frequency(input=reducer_stream(KEYS, VALUES), output=sys.stdout):
+    """
+    (word file_name) (1) --> (word file_name) (n)
 
-for line in sys.stdin:
-    key, value = line.strip().split('\t')
-    word, filename = key.strip().split()
-    count = int(value)
-    if ((cur_word == word) and (filename == cur_file)):
-        cur_count += count
-    else:
-        if cur_word is not None:
-            print '{0} {1}\t{2}'.format(cur_word, cur_file, cur_count)
-        cur_count = count
-        cur_word = word
-        cur_file = filename
+    sums up the number of occurences of each word in each file and emits
+    the result for each word/filename combination
+    """
 
-if cur_word is not None:
-    print '{0} {1}\t{2}'.format(cur_word, cur_file, cur_count)
+    for key, key_stream in input:
+        count = 0
+        for value in key_stream:
+            count += int(value['count'])
+        print_result(key, count, output)
+
+
+def print_result(key, count, output):
+    result = '{0} {1}\t{2}'.format(key['word'], key['filename'], count)
+    print(result, file=output)
+
+
+if __name__ == '__main__':
+    reduce_word_frequency()
