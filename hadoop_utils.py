@@ -82,6 +82,7 @@ def hdfs_avro_records_file_content(filepath, url=SAMPA_HDFS_URL):
     avro_reader = hdfs.ext.avro.AvroReader(client, filepath)
     for record in avro_reader.records:
         yield record
+    raise StopIteration()
 
 
 def main():
