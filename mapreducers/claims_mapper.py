@@ -3,7 +3,7 @@
 import sys
 import json
 import argparse
-import map_reduce_utils as mru
+import nltk_hadoop.map_reduce_utils as mru
 
 # this should become an arg to map_claims
 INPUT_KV_DELIM = '"~~'
