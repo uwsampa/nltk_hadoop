@@ -19,9 +19,6 @@ see help and arguments.
 # the directory where hadoop will read/write to
 WORK_DIR_PREFIX = 'hdfs:///patents/output'
 
-# the directory where we store our mappers/reducers
-PYTHON_MAPRED_BIN_DIR = 'mapreducers/'
-
 
 def get_output_dir(sub_dir=''):
     """
@@ -128,7 +125,7 @@ if __name__ == '__main__':
 
     # do an MR job to clean/stem file contents
     # contents_mapper_cmd = 'contents_mapper.py'
-    contents_mapper_cmd = PYTHON_MAPRED_BIN_DIR + 'claims_mapper.py'
+    contents_mapper_cmd = 'claims_mapper.py'
     if stop_words is not None:
         contents_mapper_cmd += ' -s {}'.format(stop_words)
         # need to tell yarn to send stop words file using -files
@@ -143,8 +140,7 @@ if __name__ == '__main__':
     # (The output here is a single number, since bringing through all of
     # the claims led to too much mem usage) so we could run this concurrently
     # with the next few jobs
-    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'corpus_size_map.py',
-                           PYTHON_MAPRED_BIN_DIR + 'corpus_size_red.py',
+    mru.run_map_reduce_job('corpus_size_map.py', 'corpus_size_red.py',
                            clean_content_dir, corpus_size_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
@@ -163,35 +159,31 @@ if __name__ == '__main__':
 
     # calcualte word frequency
     word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n),
-    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + word_freq_map_cmd,
-                           PYTHON_MAPRED_BIN_DIR + 'word_freq_red.py',
+    mru.run_map_reduce_job(word_freq_map_cmd, 'word_freq_red.py',
                            clean_content_dir, word_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # caclulate word count for each document
-    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'word_count_map.py',
-                           PYTHON_MAPRED_BIN_DIR + 'word_count_red.py',
+    mru.run_map_reduce_job('word_count_map.py', 'word_count_red.py',
                            word_frequency_dir, word_count_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calculate word frequency in corpus
-    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'corp_freq_map.py',
-                           PYTHON_MAPRED_BIN_DIR + 'corp_freq_red.py',
+    mru.run_map_reduce_job('corp_freq_map.py', 'corp_freq_red.py',
                            word_count_dir, corpus_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # now, calculate tfidf scores
     tfidf_command_template = 'tf_idf_map.py -s {}'.format(corpus_size)
-    mru.run_map_job(PYTHON_MAPRED_BIN_DIR + tfidf_command_template,
+    mru.run_map_job(tfidf_command_template,
                     corpus_frequency_dir, tfidf_dir,
                     input_format=mru.AVRO_INPUT_FORMAT,
                     output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    mru.run_map_reduce_job(PYTHON_MAPRED_BIN_DIR + 'normalize_mapper.py',
-                           PYTHON_MAPRED_BIN_DIR + 'normalize_reducer.py',
+    mru.run_map_reduce_job('normalize_mapper.py', 'normalize_reducer.py',
                            tfidf_dir, normalized_tfidf_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
