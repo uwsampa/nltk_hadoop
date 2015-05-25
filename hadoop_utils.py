@@ -77,7 +77,7 @@ def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
             hdfs_write_to_file(filepath, '', url)
 
 
-def hdfs_avro_records_file_content(filepath, url=SAMPA_HDFS_URL):
+def hdfs_avro_records(filepath, url=SAMPA_HDFS_URL):
     client = hdfs_client_connection(url=url)
     avro_reader = hdfs.ext.avro.AvroReader(client, filepath)
     for record in avro_reader.records:

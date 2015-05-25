@@ -5,9 +5,9 @@ import os
 import argparse
 import sys
 import re
-import subprocess
 import json
 import map_reduce_utils as mru
+import hadoop_utils as hu
 
 
 """
@@ -135,7 +135,6 @@ if __name__ == '__main__':
         mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
                         output_format=mru.AVRO_OUTPUT_FORMAT)
 
-
     # calculate corpus size
     # (The output here is a single number, since bringing through all of
     # the claims led to too much mem usage) so we could run this concurrently
@@ -145,17 +144,8 @@ if __name__ == '__main__':
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
     # Now, parse the result to use later
-    corpus_size_location = corpus_size_dir + '/part-00000.avro'
-    corpus_size_cmd = 'hadoop fs -cat {}'.format(corpus_size_location)
-    corpus_size_output = subprocess.check_output(corpus_size_cmd,
-                                                 env=os.environ.copy(),
-                                                 shell=True)
-    # For now, don't try to parse output as avro. Just splice off the json.
-    # Yes, this is . . . bad. Fix it later.
-    corpus_size_json = corpus_size_output.split('{')[1].split('}')[0]
-    corpus_size_json = '{' + corpus_size_json + '}'
-    corpus_size = json.loads(corpus_size_json)['value']
-
+    corpus_size_job_result = hu.hdfs_avro_records(corpus_size_dir).next()
+    corpus_size = int(json.loads(corpus_size_job_result)['value'])
 
     # calcualte word frequency
     word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n),
