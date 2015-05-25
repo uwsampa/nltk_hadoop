@@ -144,8 +144,9 @@ if __name__ == '__main__':
                            input_format=mru.AVRO_INPUT_FORMAT,
                            output_format=mru.AVRO_OUTPUT_FORMAT)
     # Now, parse the result to use later
-    corpus_size_job_result = hu.hdfs_avro_records(corpus_size_dir).next()
-    corpus_size = int(json.loads(corpus_size_job_result)['value'])
+    relative_corpus_size_dir = corpus_size_dir.split('hdfs:///')[1]
+    corpus_size_job_record = hu.hdfs_avro_records(relative_corpus_size_dir)
+    corpus_size = int(json.loads(corpus_size_job_record.next())['value'])
 
     # calcualte word frequency
     word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n),
