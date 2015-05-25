@@ -149,7 +149,7 @@ if __name__ == '__main__':
     corpus_size = int(json.loads(corpus_size_job_record.next())['value'])
 
     # calcualte word frequency
-    word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n),
+    word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n)
     mru.run_map_reduce_job(word_freq_map_cmd, 'word_freq_red.py',
                            clean_content_dir, word_frequency_dir,
                            input_format=mru.AVRO_INPUT_FORMAT,
