@@ -76,8 +76,8 @@ if __name__ == '__main__':
                         help=stop_words_help, dest='stop_words')
 
     stemmer_help = 'if true, use nltk PorterStemmer to stem ngrams'
-    parser.add_argument('--stem', type=bool, action='store_true', dest='stem')
-    parser.add_argument('--no-stem', type=bool, action='store_false', dest='stem')
+    parser.add_argument('--stem', action='store_true', dest='stem')
+    parser.add_argument('--no-stem', action='store_false', dest='stem')
     parser.set_defaults(stem=True)
 
     args = parser.parse_args()
