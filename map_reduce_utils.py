@@ -89,7 +89,7 @@ def run_map_job(mapper, input_dir, output_dir, files='',
          -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{5}" \
          -inputformat {6} \
          -outputformat {7} \
-         {}
+         {8}
     '''.format(files, "$AVRO_JAR,$HADOOP_JAR",
                kv_separator, input_dir, output_dir, mapper,
                input_format, output_format, compression_arg).strip()
@@ -134,7 +134,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
          -output {6} \
          -inputformat {7} \
          -outputformat {8} \
-         {}
+         {9}
     '''.format(files, "$AVRO_JAR,$HADOOP_JAR", kv_separator, mapper, reducer,
                input_dir, output_dir, input_format, output_format, compression_arg)
     command = command.strip()
