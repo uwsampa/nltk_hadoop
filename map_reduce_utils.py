@@ -66,6 +66,12 @@ def run_map_job(mapper, input_dir, output_dir, files='',
     if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
 
+    # only use compression if our output format is avro:
+    compression_arg = ''
+    if output_format == AVRO_OUTPUT_FORMAT:
+        compression_arg = '-D mapred.output.compress=true'
+        compression_arg += ' -D avro.output.codec=snappy'
+
     if files == '':
         files = map_file
     else:
@@ -82,10 +88,11 @@ def run_map_job(mapper, input_dir, output_dir, files='',
          -output {4} \
          -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{5}" \
          -inputformat {6} \
-         -outputformat {7}
+         -outputformat {7} \
+         {}
     '''.format(files, "$AVRO_JAR,$HADOOP_JAR",
                kv_separator, input_dir, output_dir, mapper,
-               input_format, output_format).strip()
+               input_format, output_format, compression_arg).strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
@@ -104,6 +111,12 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
     if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
         shutil.rmtree('./' + output_dir)
 
+    # only use compression if our output format is avro:
+    compression_arg = ''
+    if output_format == AVRO_OUTPUT_FORMAT:
+        compression_arg = '-D mapred.output.compress=true'
+        compression_arg += ' -D avro.output.codec=snappy'
+
     # all of the additional files each node needs, comma separated
     if files == '':
         files = map_file + ',' + red_file + ',$NLTK_HOME/invoke.sh'
@@ -120,9 +133,10 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
          -input {5} \
          -output {6} \
          -inputformat {7} \
-         -outputformat {8}
+         -outputformat {8} \
+         {}
     '''.format(files, "$AVRO_JAR,$HADOOP_JAR", kv_separator, mapper, reducer,
-               input_dir, output_dir, input_format, output_format)
+               input_dir, output_dir, input_format, output_format, compression_arg)
     command = command.strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
