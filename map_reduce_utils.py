@@ -69,7 +69,7 @@ def run_map_job(mapper, input_dir, output_dir, files='',
     # only use compression if our output format is avro:
     compression_arg = ''
     if output_format == AVRO_OUTPUT_FORMAT:
-        compression_arg = '-D mapred.output.compress=true'
+        compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
         compression_arg += ' -D avro.output.codec=snappy'
 
     if files == '':
@@ -84,7 +84,7 @@ def run_map_job(mapper, input_dir, output_dir, files='',
          -libjars {1} \
          -D mapreduce.job.reduces=0 \
          -D stream.map.output.field.separator={2} \
-         {8}
+         {8} \
          -input {3} \
          -output {4} \
          -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{5}" \
@@ -114,7 +114,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
     # only use compression if our output format is avro:
     compression_arg = ''
     if output_format == AVRO_OUTPUT_FORMAT:
-        compression_arg = '-D mapred.output.compress=true'
+        compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
         compression_arg += ' -D avro.output.codec=snappy'
 
     # all of the additional files each node needs, comma separated
