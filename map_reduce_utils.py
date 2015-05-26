@@ -18,6 +18,7 @@ map-reduce tasks.
 
 KV_SEPARATOR = '\t'
 
+DEFAULT_CODEC = 'deflate'
 
 APACHE_LIB = 'org.apache.hadoop.mapred'
 
@@ -58,7 +59,7 @@ def mkdir_hdfs(dir):
 def run_map_job(mapper, input_dir, output_dir, files='',
                 input_format=DEFAULT_INPUT_FORMAT,
                 output_format=DEFAULT_OUTPUT_FORMAT,
-                kv_separator=KV_SEPARATOR):
+                kv_separator=KV_SEPARATOR, codec=DEFAULT_CODEC):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
@@ -70,7 +71,7 @@ def run_map_job(mapper, input_dir, output_dir, files='',
     compression_arg = ''
     if output_format == AVRO_OUTPUT_FORMAT:
         compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
-        compression_arg += ' -D avro.output.codec=snappy'
+        compression_arg += ' -D avro.output.codec={}'.format(DEFAULT_CODEC)
 
     if files == '':
         files = map_file
@@ -102,7 +103,7 @@ def run_map_job(mapper, input_dir, output_dir, files='',
 def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
                        input_format=DEFAULT_INPUT_FORMAT,
                        output_format=DEFAULT_OUTPUT_FORMAT,
-                       kv_separator=KV_SEPARATOR):
+                       kv_separator=KV_SEPARATOR, codec=DEFAULT_CODEC):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
@@ -115,7 +116,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
     compression_arg = ''
     if output_format == AVRO_OUTPUT_FORMAT:
         compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
-        compression_arg += ' -D avro.output.codec=snappy'
+        compression_arg += ' -D avro.output.codec={}'.format(DEFAULT_CODEC)
 
     # all of the additional files each node needs, comma separated
     if files == '':
