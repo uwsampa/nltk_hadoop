@@ -146,7 +146,7 @@ def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
         raise MapReduceError(err_msg.format(mapper, reducer), e)
 
 
-def clean_text(text, stop_word_list=stop_words):
+def clean_text(text, stop_word_list=stop_words, stem=True):
     """
     returns a 'cleaned' version of text by filtering out all words
     that don't contain strictly alphabetic characters, converting
@@ -163,7 +163,8 @@ def clean_text(text, stop_word_list=stop_words):
     is_alpha = re.compile('^[a-z]+$')
     result = filter(lambda word: is_alpha.match(word), result)
 
-    result = [stemmer.stem(word) for word in result]
+    if stem:
+        result = [stemmer.stem(word) for word in result]
     return filter(lambda word: word not in stop_word_list, result)
 
 

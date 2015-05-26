@@ -75,12 +75,16 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--stop-words', default=None,
                         help=stop_words_help, dest='stop_words')
 
+    stemmer_help = 'if true, use nltk PorterStemmer to stem ngrams'
+    parser.add_argument('-t', '--stem', type=bool, dest='stem', default=True)
+
     args = parser.parse_args()
     input_dir = args.input_dir
     output_dir = args.output_dir
     force = args.force
     n = args.n
     stop_words = args.stop_words
+    stem = args.stem
     directories.append(output_dir)
 
     # whether or not we're working in hdfs
@@ -125,7 +129,7 @@ if __name__ == '__main__':
 
     # do an MR job to clean/stem file contents
     # contents_mapper_cmd = 'contents_mapper.py'
-    contents_mapper_cmd = 'claims_mapper.py'
+    contents_mapper_cmd = 'claims_mapper.py -t {}'.format(stem)
     if stop_words is not None:
         contents_mapper_cmd += ' -s {}'.format(stop_words)
         # need to tell yarn to send stop words file using -files
