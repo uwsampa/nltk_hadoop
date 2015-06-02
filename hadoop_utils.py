@@ -53,7 +53,9 @@ def hdfs_append_to_file(filepath, text_to_append, url=SAMPA_HDFS_URL):
     """
     hdfs_touch_file(filepath, url=url)
     client = hdfs_client_connection(url=url)
-    client.append(filepath, text_to_append)
+    response = client.append(filepath, text_to_append)
+    if not response.ok:
+        raise Exception("failed to append:" + response.reason)
 
 
 def hdfs_write_to_file(filepath, content, url=SAMPA_HDFS_URL):
@@ -62,7 +64,9 @@ def hdfs_write_to_file(filepath, content, url=SAMPA_HDFS_URL):
     """
     # may need to set overwrite option here
     client = hdfs_client_connection(url=url)
-    client.write(filepath, content)
+    response = client.write(filepath, content)
+    if not response.ok:
+        raise Exception("failed to write to file:" + response.reason)
 
 
 def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
@@ -75,6 +79,8 @@ def hdfs_touch_file(filepath, url=SAMPA_HDFS_URL):
         if str(e) == 'File /{} not found.'.format(filepath):
             # write creates neccessary dirs / files
             hdfs_write_to_file(filepath, '', url)
+        else:
+            raise e
 
 
 def hdfs_avro_records(filepath, url=SAMPA_HDFS_URL):
@@ -83,6 +89,20 @@ def hdfs_avro_records(filepath, url=SAMPA_HDFS_URL):
     for record in avro_reader.records:
         yield record
     raise StopIteration()
+
+
+def hdfs_make_directory(filepath, url=SAMPA_HDFS_URL):
+    client = hdfs_client_connection(url=url)
+    response = client._create(filepath)
+    if not response.ok:
+        raise Exception("failed to mkdir:" + response.reason)
+
+
+def hdfs_remove_directory(filepath, url=SAMPA_HDFS_URL):
+    client = hdfs_client_connection(url=url)
+    response = client._delete(filepath)
+    if not response.ok:
+        raise Exception("failed to rmdir:" + response.reason)
 
 
 def main():

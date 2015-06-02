@@ -4,12 +4,16 @@ from __future__ import print_function
 from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS as stop_words
 import string
+import StringIO
 import re
 import os
 import sys
 import shutil
 import subprocess
 import json
+import inspect
+import hadoop_utils as hu
+
 
 """
 map_reduce_utils contains helper functions that are used in multiple
@@ -25,14 +29,16 @@ APACHE_LIB = 'org.apache.hadoop.mapred'
 DEFAULT_INPUT_FORMAT = '{}.TextInputFormat'.format(APACHE_LIB)
 DEFAULT_OUTPUT_FORMAT = '{}.TextOutputFormat'.format(APACHE_LIB)
 
-
 AVRO_IO_LIB = 'org.apache.avro.mapred'
 
 AVRO_INPUT_FORMAT = '{}.AvroAsTextInputFormat'.format(AVRO_IO_LIB)
 AVRO_OUTPUT_FORMAT = '{}.AvroTextOutputFormat'.format(AVRO_IO_LIB)
 
-# AVRO_INPUT_FORMAT = 'org.apache.avro.mapreduce.AvroKeyValueInputFormat'
-# AVRO_OUTPUT_FORMAT = 'org.apache.avro.mapreduce.AvroKeyValueOutputFormat'
+INVOKE_PYTHON_CMD = '$NLTK_HOME/invoke.sh python -c "import imp;' + \
+                    'mapred_module = imp.load_source(\'\', \'{source_file}\');' + \
+                    'mapred_module.{function_to_invoke}({args})"'
+
+DEFAULT_MAPREDUCE_ARGS = {}
 
 
 class MapReduceError(Exception):
@@ -46,30 +52,46 @@ class MapReduceError(Exception):
         return repr(self.value)
 
 
-def rm_hdfs(dir):
-    command = 'hdfs dfs -rm -r {}'.format(dir)
-    subprocess.check_call(command, env=os.environ.copy(), shell=True)
+def get_mapreducer_cmd(*args, **kwargs):
+    format_args = {}
+    for key in ('mapreducer', 'args'):
+        if key in kwargs:
+            format_args[key] = kwargs[key]
+        elif key is 'args':
+            format_args[key] = DEFAULT_MAPREDUCE_ARGS
+        else:
+            raise Exception('mapper or reducer command missing arg:', key)
+    format_args['function_to_invoke'] = format_args['mapreducer'].__file__
+    format_args['source_file'] = inspect.getabsfile(format_args['mapreducer'])
+    format_args['args'] = ', '.join('{}={}'.format(key, args[key]) for key in args)
+    cmd = INVOKE_PYTHON_CMD.format(format_args)
+
+    # since we're escaping single quotes in the format skeleton,
+    # we need to "print" the string into another string so that
+    # those single quotes are no longer escaped
+    f = StringIO.StringIO()
+    f.write(cmd)
+    cmd = f.getvalue()
+    return cmd
 
 
-def mkdir_hdfs(dir):
-    command = 'hdfs dfs -mkdir {}'.format(dir)
-    subprocess.check_call(command, env=os.environ.copy(), shell=True)
-
-
-def run_map_job(mapper, input_dir, output_dir, files='',
-                input_format=DEFAULT_INPUT_FORMAT,
-                output_format=DEFAULT_OUTPUT_FORMAT,
+def run_map_job(mapper, args={}, src='', dst='', files='',
+                src_format=DEFAULT_INPUT_FORMAT,
+                dst_format=DEFAULT_OUTPUT_FORMAT,
                 kv_separator=KV_SEPARATOR, codec=DEFAULT_CODEC):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
+    map_file = inspect.getabsfile(mapper)
+
+    # if we were given a MapReduceResult as input, then use it's hdfs
+    # output directory as the input directory for this job
+    if isinstance(src, MapReduceResult):
+        src = src.directory
 
     # only use compression if our output format is avro:
     compression_arg = ''
-    if output_format == AVRO_OUTPUT_FORMAT:
+    if dst_format == AVRO_OUTPUT_FORMAT:
         compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
         compression_arg += ' -D avro.output.codec={}'.format(DEFAULT_CODEC)
 
@@ -79,71 +101,88 @@ def run_map_job(mapper, input_dir, output_dir, files='',
         files += ',' + map_file
     files += ",$NLTK_HOME/invoke.sh"
 
+    map_command = get_mapreducer_cmd(mapreducer=mapper, args=args)
+
     command = '''
       yarn jar $HADOOP_JAR \
-         -files {0} \
-         -libjars {1} \
+         -files {files} \
+         -libjars {jars} \
          -D mapreduce.job.reduces=0 \
-         -D stream.map.output.field.separator={2} \
-         {8} \
-         -input {3} \
-         -output {4} \
-         -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{5}" \
-         -inputformat {6} \
-         -outputformat {7} \
-    '''.format(files, "$AVRO_JAR,$HADOOP_JAR",
-               kv_separator, input_dir, output_dir, mapper,
-               input_format, output_format, compression_arg).strip()
+         -D stream.map.output.field.separator={separator} \
+         {compression} \
+         -input {input} \
+         -output {output} \
+         -mapper "{map_cmd}" \
+         -inputformat {in_format} \
+         -outputformat {out_format} \
+    '''.format(files=files, jars="$AVRO_JAR,$HADOOP_JAR",
+               separator=kv_separator, input=src, output=dst,
+               map_cmd=map_command, compression=compression_arg,
+               in_format=src_format, out_format=dst_format).strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
         raise MapReduceError('Map job {0} failed'.format(mapper), e)
 
+    return MapReduceResult(output_dir=dst, output_format=dst_format)
 
-def run_map_reduce_job(mapper, reducer, input_dir, output_dir, files='',
-                       input_format=DEFAULT_INPUT_FORMAT,
-                       output_format=DEFAULT_OUTPUT_FORMAT,
+
+def run_map_reduce_job(mapper, reducer, mapper_args={}, reducer_args={},
+                       src='', dst='', files=None,
+                       src_format=DEFAULT_INPUT_FORMAT,
+                       dst_format=DEFAULT_OUTPUT_FORMAT,
                        kv_separator=KV_SEPARATOR, codec=DEFAULT_CODEC):
     env = os.environ.copy()
     # we have to pass the specific files as well to allow for
     # arguments to the mapper and reducer
-    map_file = '$NLTK_HOME/' + mapper.strip().split()[0]
-    red_file = '$NLTK_HOME/' + reducer.strip().split()[0]
-    if not output_dir[0:7] == 'hdfs://' and os.path.exists('./' + output_dir):
-        shutil.rmtree('./' + output_dir)
+    map_file = inspect.getabsfile(mapper)
+    red_file = inspect.getabsfile(reducer)
+
+    # if we were given a MapReduceResult as input, then use it's hdfs
+    # output directory as the input directory for this job
+    if isinstance(src, MapReduceResult):
+        src = src.directory
 
     # only use compression if our output format is avro:
     compression_arg = ''
-    if output_format == AVRO_OUTPUT_FORMAT:
+    if dst_format == AVRO_OUTPUT_FORMAT:
         compression_arg = '-D mapreduce.output.fileoutputformat.compress=true'
         compression_arg += ' -D avro.output.codec={}'.format(DEFAULT_CODEC)
 
     # all of the additional files each node needs, comma separated
-    if files == '':
+    if files is None:
         files = map_file + ',' + red_file + ',$NLTK_HOME/invoke.sh'
     else:
         files += map_file + ',' + red_file + ',$NLTK_HOME/invoke.sh'
 
+    mapper_command = get_mapreducer_cmd(mapreducer=mapper, args=mapper_args)
+
+    reducer_command = get_mapreducer_cmd(mapreduver=reducer, args=reducer_args)
+
     command = '''
       yarn jar $HADOOP_JAR \
-         -files {0} \
-         -libjars {1} \
-         -D stream.map.output.field.separator={2} \
-         {9} \
-         -mapper "$NLTK_HOME/invoke.sh $NLTK_HOME/{3}" \
-         -reducer "$NLTK_HOME/invoke.sh $NLTK_HOME/{4}" \
-         -input {5} \
-         -output {6} \
-         -inputformat {7} \
-         -outputformat {8}
-    '''.format(files, "$AVRO_JAR,$HADOOP_JAR", kv_separator, mapper, reducer,
-               input_dir, output_dir, input_format, output_format, compression_arg)
+         -files {files} \
+         -libjars {jars} \
+         -D stream.map.output.field.separator={separator} \
+         {compression} \
+         -mapper "{mapper}" \
+         -reducer "{reducer}" \
+         -input {input} \
+         -output {output} \
+         -inputformat {input_format} \
+         -outputformat {output_format}
+    '''.format(files=files, jars="$AVRO_JAR,$HADOOP_JAR", separator=kv_separator,
+               mapper=mapper_command, reducer=reducer_command,
+               input=src, output=dst, input_format=src_format,
+               output_format=src_format, compression=compression_arg)
     command = command.strip()
     try:
         subprocess.check_call(command, env=env, shell=True)
     except subprocess.CalledProcessError as e:
         err_msg = 'ERROR: Map-Reduce job {0}, {1} failed'
         raise MapReduceError(err_msg.format(mapper, reducer), e)
+
+    return MapReduceResult(output_dir=dst, output_format=dst_format)
 
 
 def clean_text(text, stop_word_list=stop_words, stem=True):
@@ -321,3 +360,40 @@ def json_loader(input=sys.stdin, tokenizer=tokenize_reducer_json):
     for line in input:
         yield tokenizer(line)
     raise StopIteration()
+
+
+class MapReduceResult(object):
+    """
+    uses webhdfs to provide the results of a map reduce job in the form of a
+    generator. can also be passed to a subsequent map reduce jobs to be used
+    as input (don't worry though, this doesn't go through webhdfs).
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        takes two kwargs: directory and results. directory is the hdfs location
+        where results are stored and results is a generator over the results
+        """
+        self.directory = re.sub('hdfs://.*/', '/', kwargs['directory'])
+        if kwargs['output_format'] is AVRO_OUTPUT_FORMAT:
+            self.hdfs_results = hu.hdfs_avro_records(self.directory)
+        else:
+            self.hdfs_results = hu.hdfs_dir_contents(self.directory)
+
+    def directory(self):
+        """
+        the hdfs location where results are stored
+        """
+        return self.directory
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            next_record = self.hdfs_results.next()
+            yield json.loads(next_record)
+        except ValueError:
+            yield next_record
+        except StopIteration:
+            raise StopIteration()

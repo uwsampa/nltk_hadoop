@@ -5,7 +5,7 @@ import os
 import argparse
 import sys
 import re
-import json
+import map_reducers
 import map_reduce_utils as mru
 import hadoop_utils as hu
 
@@ -106,9 +106,9 @@ if __name__ == '__main__':
                 print('Exiting now')
                 exit()
         to_delete = get_output_dir()
-        mru.rm_hdfs(to_delete)
+        hu.hdfs_remove_directory(to_delete)
         # make a fresh empty dir
-        mru.mkdir_hdfs(get_output_dir())
+        hu.hdfs_make_directory(get_output_dir())
     else:
         # obviously, this won't work if we're using hdfs
         dirs_to_overwrite = filter(os.path.exists, directories)
@@ -132,71 +132,66 @@ if __name__ == '__main__':
         raise e
 
     # do an MR job to clean/stem file contents
-    # contents_mapper_cmd = 'contents_mapper.py'
-    contents_mapper_cmd = 'claims_mapper.py -t {}'.format(stem)
+    claims_mapper_fn = map_reducers.map_claims
+    claims_mapper_args = {'kv_delim': '"~~', 'stem': stem}
     if stop_words is not None:
-        contents_mapper_cmd += ' -s {}'.format(stop_words)
-        # need to tell yarn to send stop words file using -files
-        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
-                        files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
-    else:
-        mru.run_map_job(contents_mapper_cmd, input_dir, clean_content_dir,
-                        output_format=mru.AVRO_OUTPUT_FORMAT)
+        claims_mapper_args['stop_words'] = stop_words
+
+    claims_mapper_result = mru.run_map_job(
+        claims_mapper_fn, claims_mapper_args,
+        src=input_dir, dst=clean_content_dir,
+        files=stop_words, output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calculate corpus size
-    # (The output here is a single number, since bringing through all of
-    # the claims led to too much mem usage) so we could run this concurrently
-    # with the next few jobs
-    mru.run_map_reduce_job('corpus_size_map.py', 'corpus_size_red.py',
-                           clean_content_dir, corpus_size_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
-    # Now, parse the result to use later
-    relative_corpus_size_dir = corpus_size_dir.split('hdfs:///')[1]
-    corpus_size_job_record = hu.hdfs_avro_records(relative_corpus_size_dir)
-    corpus_size = int(json.loads(corpus_size_job_record.next())['value'])
+    corpus_size_map_fn = map_reducers.map_corpus_size
+    corpus_size_red_fn = map_reducers.reduce_corpus_size
+
+    corpus_size_results = mru.run_map_reduce_job(
+        corpus_size_map_fn, corpus_size_red_fn,
+        src=claims_mapper_result, dst=corpus_size_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
+
+    corpus_size_record = corpus_size_results.next()
+    corpus_size = corpus_size_record['corpus size']
 
     # calcualte word frequency
-    word_freq_map_cmd = 'word_freq_map.py -n {}'.format(n)
-    mru.run_map_reduce_job(word_freq_map_cmd, 'word_freq_red.py',
-                           clean_content_dir, word_frequency_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
+    word_frequency_map_fn = map_reducers.map_word_frequency
+    word_frequency_reduce_fn = map_reducers.reducer_word_frequency
+    word_frequency_map_args = {'n': n}
+
+    word_frequency_result = mru.run_map_reduce_job(
+        word_frequency_map_fn, word_frequency_reduce_fn,
+        src=claims_mapper_result, dst=word_frequency_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # caclulate word count for each document
-    mru.run_map_reduce_job('word_count_map.py', 'word_count_red.py',
-                           word_frequency_dir, word_count_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
+    word_count_map_fn = map_reducers.map_word_count
+    word_count_reduce_fn = map_reducers.reduce_word_count
+    word_count_results = mru.run_map_reduce_job(
+        word_count_map_fn, word_count_reduce_fn,
+        src=word_frequency_result, dst=word_count_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
 
     # calculate word frequency in corpus
-    mru.run_map_reduce_job('corp_freq_map.py', 'corp_freq_red.py',
-                           word_count_dir, corpus_frequency_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
+    corpus_frequency_map_fn = map_reducers.map_corpus_frequency
+    corpus_frequency_reduce_fn = map_reducers.reduce_corpus_frequency
+    corpus_frequency_results = mru.run_map_reduce_job(
+        corpus_frequency_map_fn, corpus_frequency_reduce_fn,
+        src=word_count_results, dst=corpus_frequency_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
 
-    # now, calculate tfidf scores
-    tfidf_command_template = 'tf_idf_map.py -s {}'.format(corpus_size)
-    mru.run_map_job(tfidf_command_template,
-                    corpus_frequency_dir, tfidf_dir,
-                    input_format=mru.AVRO_INPUT_FORMAT,
-                    output_format=mru.AVRO_OUTPUT_FORMAT)
-
-    mru.run_map_reduce_job('normalize_mapper.py', 'normalize_reducer.py',
-                           tfidf_dir, normalized_tfidf_dir,
-                           input_format=mru.AVRO_INPUT_FORMAT,
-                           output_format=mru.AVRO_OUTPUT_FORMAT)
+    # calculate tfidf scores
+    tfidf_map_fn = map_reducers.map_tf_idf
+    tfidf_map_args = {'corpus_size': corpus_size}
+    tfidf_results = mru.run_map_job(
+        tfidf_map_fn, tfidf_map_args,
+        src=corpus_frequency_results, dst=tfidf_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
 
 
-    # we're not using hadoop for this dot product any more
-    # # join on words for cosine similarity
-    # mru.run_map_reduce_job('word_join_map.py', 'word_join_red.py',
-    #                        tfidf_dir, word_join_dir,
-    #                        input_format=mru.AVRO_INPUT_FORMAT,
-    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
-
-    # # now, sum up the products to get the cosine similarities
-    # mru.run_map_reduce_job('cos_sim_map.py', 'cos_sim_red.py',
-    #                        word_join_dir, output_dir,
-    #                        input_format=mru.AVRO_INPUT_FORMAT,
-    #                        output_format=mru.AVRO_OUTPUT_FORMAT)
+    normalize_map_fn = map_reducers.normalize_mapper
+    normalize_reduce_fn = map_reducers.normalize_reducer
+    normalized_tfidf_results = mru.run_map_reduce_job(
+        normalize_map_fn, normalize_reduce_fn,
+        src=tfidf_results, dst=normalized_tfidf_dir,
+        input_format=mru.AVRO_INPUT_FORMAT, output_format=mru.AVRO_OUTPUT_FORMAT)
