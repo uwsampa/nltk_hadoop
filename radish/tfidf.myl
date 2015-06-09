@@ -33,7 +33,7 @@ invfreq = select bigrams.term as term,
     from bigrams;  -- groups by term
 
 idf = select invfreq.term as term,
-             log( 300/ invfreq.numdocs) as idf
+             log( FLOAT(300)/ invfreq.numdocs) as idf
     from invfreq;
 
 
