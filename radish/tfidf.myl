@@ -5,15 +5,15 @@
 --assume schema for bigrams
 --filename term (bigram is term)
 
-bigrams = scan(bigrams);
+bigrams = scan(ngrams);
 
--- freqs
-freq = select bigrams.term as term,
+-- Frequency(t, d)
+freq = select bigrams.word as term,
        bigrams.filename as document,
-       count(bigrams.term) as freq
+       count(bigrams.word) as freq
     from bigrams;  -- groups by term, filename
 
--- max freqs
+-- MaxFrequency(d) = max_{w \in d}(Frequency(w,d))
 maxfreq = select freq.document as document,
                   max(freq.freq) as maxfreq
     from freq;  -- groups by document
@@ -28,9 +28,11 @@ tf = select freq.term as term,
 -- num documents
 -- hardcoded N=300
 
-invfreq = select bigrams.term as term,
+invfreq = select bigrams.word as term,
                  COUNT(bigrams.filename) as numdocs
     from bigrams;  -- groups by term
+
+    -- how many?
 
 idf = select invfreq.term as term,
              log( FLOAT(300)/ invfreq.numdocs) as idf
